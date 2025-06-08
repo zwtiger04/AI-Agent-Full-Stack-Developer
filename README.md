@@ -129,3 +129,23 @@ python main.py
   - 작업 시작/완료 시 자동 문서화
   - 새로운 컨벤션이나 패턴 발견 시 문서화
 [TODO] **임시 스크립트 (`update_empty_fields.py`) 제거:** 23주차 기사 전체 업데이트 임시 코드 (2024년 6월 30일 제거 예정)
+
+## 🔒 보안 설정
+
+### 환경변수 설정
+1. `.env.example` 파일을 복사하여 `.env` 파일을 생성하세요:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. `.env` 파일을 열어 실제 API 키로 교체하세요:
+   - `NOTION_API_KEY`: Notion 통합 API 키
+   - `OPENAI_API_KEY`: OpenAI API 키
+   - `GITHUB_TOKEN`: GitHub Personal Access Token
+   - 기타 필요한 키들
+
+### ⚠️ 중요한 보안 주의사항
+- **절대로 `.env` 파일을 Git에 커밋하지 마세요!**
+- API 키가 노출된 경우 즉시 재발급하세요
+- `.gitignore`에 `.env`가 포함되어 있는지 확인하세요
+- 공개 저장소에서는 실제 API 키를 사용하지 마세요
