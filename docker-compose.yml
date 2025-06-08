@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  news-crawler:
+    build: .
+    container_name: news-crawler
+    volumes:
+      - ./logs:/app/logs
+      - ./.env.production:/app/.env
+    environment:
+      - TZ=Asia/Seoul
+    restart: unless-stopped
+    networks:
+      - news-crawler-network
+
+networks:
+  news-crawler-network:
+    driver: bridge 
