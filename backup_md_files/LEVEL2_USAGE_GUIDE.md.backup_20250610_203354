@@ -1,0 +1,140 @@
+# 🚀 Level 2 카드뉴스 자동화 시스템 사용 가이드
+
+## 📋 시스템 구성요소
+
+### 1. **관심 기사 모니터링** (`watch_interested_articles.py`)
+- 노션에서 관심 체크된 기사를 5분마다 확인
+- 새로운 관심 기사를 `pending_cardnews.json`에 저장
+
+### 2. **카드뉴스 생성 UI** (`card_news_app.py`)
+- Streamlit 기반 웹 인터페이스
+- Claude AI를 활용한 HTML 카드뉴스 생성
+- 미리보기 및 저장 기능
+
+### 3. **통합 실행기** (`run_level2.py`)
+- 모니터링과 UI를 함께 실행
+- 프로세스 관리 및 재시작
+
+## 🔧 실행 방법
+
+### 전체 시스템 실행 (권장)
+```bash
+python3 run_level2.py
+```
+
+### 개별 실행
+```bash
+# 모니터링만
+python3 run_level2.py --monitor-only
+
+# UI만
+python3 run_level2.py --ui-only
+
+# 또는 개별 스크립트
+./start_monitoring.sh      # 백그라운드 모니터링
+./run_cardnews_ui.sh       # UI 실행
+```
+
+## 📊 작업 흐름
+
+1. **노션에서 관심 기사 체크** ✅
+   - 크롤링된 기사 중 카드뉴스로 만들고 싶은 것 선택
+
+2. **시스템이 자동 감지** 🔍
+   - 5분마다 체크하여 새 관심 기사 발견
+   - `pending_cardnews.json`에 추가
+
+3. **웹 UI에서 생성** 🎨
+   - http://localhost:8501 접속
+   - API 키 입력 (첫 실행 시)
+   - 기사 선택 → 생성 → 미리보기 → 저장
+
+4. **생성된 카드뉴스 확인** 📁
+   - `detailed/` 폴더에 HTML 파일로 저장
+   - 브라우저에서 바로 열어볼 수 있음
+
+## 💡 사용 팁
+
+### API 키 설정
+```bash
+# .env 파일에 추가
+ANTHROPIC_API_KEY=sk-ant-...
+
+# 또는 환경변수로 설정
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### 로그 확인
+```bash
+# 모니터링 로그
+tail -f logs/interest_monitor.log
+
+# 실시간 모니터 출력
+tail -f logs/monitor.log
+```
+
+### 파일 구조
+```
+pending_cardnews.json    # 대기 중인 기사
+processed_articles.json  # 처리 완료 기사
+detailed/               # 생성된 카드뉴스 HTML
+logs/                   # 로그 파일
+```
+
+## ⚠️ 주의사항
+
+1. **API 비용**
+   - 기사당 약 $0.40-0.55 (550-750원)
+   - 수정/재생성 시 추가 비용 발생
+
+2. **저장 공간**
+   - 생성된 HTML은 `detailed/` 폴더에 누적
+   - 주기적으로 정리 필요
+
+3. **프로세스 관리**
+   - 종료: Ctrl+C
+   - 강제 종료: `pkill -f "watch_interested|streamlit"`
+
+## 🔍 문제 해결
+
+### Streamlit이 실행되지 않을 때
+```bash
+# 포트 확인
+lsof -i :8501
+
+# 다른 포트로 실행
+streamlit run card_news_app.py --server.port 8502
+```
+
+### 모니터링이 작동하지 않을 때
+```bash
+# 수동 실행으로 테스트
+python3 watch_interested_articles.py --once
+
+# 로그 확인
+cat logs/interest_monitor.log
+```
+
+### API 오류 발생 시
+- API 키 확인
+- 잔액 확인 (https://console.anthropic.com)
+- 네트워크 연결 확인
+
+## 📈 성능 최적화
+
+1. **모니터링 간격 조정**
+   ```python
+   # run_level2.py에서 --interval 값 변경
+   '--interval', '600'  # 10분으로 변경
+   ```
+
+2. **캐싱 활용**
+   - 비슷한 기사는 기존 템플릿 재사용
+   - 자주 사용하는 요소는 별도 저장
+
+3. **배치 처리**
+   - 여러 기사를 한 번에 선택하여 생성
+
+---
+
+Happy Card News Making! 🎨⚡

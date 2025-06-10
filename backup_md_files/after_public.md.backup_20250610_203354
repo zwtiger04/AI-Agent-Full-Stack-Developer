@@ -1,0 +1,18 @@
+# 🎉 Public 변경 후 할 일
+
+## 1️⃣ GitHub Pages 활성화
+- Settings → Pages
+- Source: Deploy from a branch
+- Branch: main, / (root)
+- Save
+
+## 2️⃣ 기존 카드뉴스 재업로드
+```bash
+python3 card_news_uploader_v2.py
+```
+
+## 3️⃣ 확인
+- GitHub: https://github.com/zwtiger04/AI-Agent-Full-Stack-Developer
+- 이미지: https://raw.githubusercontent.com/zwtiger04/AI-Agent-Full-Stack-Developer/main/card_news/20250608/slide_01.png
+
+## ✅ 이제 Notion에서 이미지가 바로 보입니다!

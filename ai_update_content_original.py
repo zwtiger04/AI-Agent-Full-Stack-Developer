@@ -75,7 +75,7 @@ def generate_one_line_summary_with_llm(content: str, use_llm: bool = True) -> st
         
     try:
         # LLM을 사용하여 한국어로 직접 요약 생성
-        korean_prompt = f"""당신은 한국의 전력산업 전문 기자입니다. 다음 기사를 정확하고 간결하게 한국어로 요약하세요. Write ONE sentence summary in Korean language only.
+        korean_prompt = f"""Korean summary required. Write ONE sentence summary in Korean language only.
 
 Article: {content[:800]}
 
@@ -87,7 +87,7 @@ Korean summary (one sentence, 100-200 characters):"""
             json={
                 "model": OLLAMA_MODEL,
                 "messages": [
-                    {"role": "system", "content": "당신은 한국의 전력산업 전문 기자입니다. 모든 답변은 반드시 한국어로만 작성하세요. 영어는 전문용어(ESS, VPP 등)만 허용됩니다."},
+                    {"role": "system", "content": "You are a journalist. Always respond in Korean language."},
                     {"role": "user", "content": korean_prompt}
                 ],
                 "stream": False
@@ -145,24 +145,11 @@ def generate_key_content(content: str, use_llm: bool = True) -> str:
         
     try:
         # LLM을 사용하여 한국어로 직접 핵심 내용 추출
-        korean_prompt = f"""당신은 한국의 전력산업 전문 분석가입니다.
-다음 기사를 분석하여 핵심 내용을 정리하세요.
+        korean_prompt = f"""Write key points in Korean. Use bullet points.
 
-형식:
-• 주요 사실 (누가, 무엇을, 어디서)
-• 핵심 수치 (용량, 금액, 기간 등)
-• 기대 효과 (CO2 감축량, 비용 절감 등)
-• 향후 계획 (목표, 일정 등)
+Article: {content[:1000]}
 
-규칙:
-- 각 항목은 한국어 완전한 문장으로 작성
-- 숫자와 단위는 정확히 표기
-- 불필요한 영어 사용 금지
-- 각 포인트는 50-100자 이내
-
-기사 전문: {content[:1500]}
-
-핵심 내용:"""
+Korean key points (3-5 points):"""
 
         print(f"[LLM:KeyContent] Generating Korean key points directly...")
         response = requests.post(
@@ -170,7 +157,7 @@ def generate_key_content(content: str, use_llm: bool = True) -> str:
             json={
                 "model": OLLAMA_MODEL,
                 "messages": [
-                    {"role": "system", "content": "당신은 한국의 전력산업 전문가입니다. 기술적 내용을 일반인도 이해할 수 있도록 쉽게 설명하되, 정확성을 유지하세요. 모든 답변은 한국어로 작성하세요."},
+                    {"role": "system", "content": "You are an analyst. Always respond in Korean language."},
                     {"role": "user", "content": korean_prompt}
                 ],
                 "stream": False

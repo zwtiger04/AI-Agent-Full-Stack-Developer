@@ -1,0 +1,311 @@
+# 📋 Level 2 부분 자동화 상세 구현 계획
+
+## 🎯 목표
+- 사용자가 관심 표시한 기사를 쉽게 카드뉴스로 변환
+- Claude AI와의 대화형 인터페이스로 품질 관리
+- 비용 효율적인 운영
+
+## 🔧 구현 컴포넌트
+
+### 1. 관심 기사 모니터링 스크립트
+`watch_interested_articles.py`
+
+```python
+import time
+import json
+from datetime import datetime
+from notion.notion_client import NotionClient
+
+class InterestMonitor:
+    def __init__(self):
+        self.notion = NotionClient()
+        self.processed_articles = self.load_processed()
+        
+    def load_processed(self):
+        """이미 처리한 기사 ID 로드"""
+        try:
+            with open('processed_articles.json', 'r') as f:
+                return set(json.load(f))
+        except:
+            return set()
+    
+    def save_processed(self, article_id):
+        """처리 완료한 기사 ID 저장"""
+        self.processed_articles.add(article_id)
+        with open('processed_articles.json', 'w') as f:
+            json.dump(list(self.processed_articles), f)
+    
+    def check_new_interests(self):
+        """새로운 관심 기사 확인"""
+        # 모든 주차의 관심 기사 가져오기
+        interested = self.notion.get_interested_articles()
+        
+        new_articles = []
+        for article in interested:
+            if article['page_id'] not in self.processed_articles:
+                new_articles.append(article)
+                
+        return new_articles
+    
+    def run(self, interval=300):  # 5분마다 체크
+        """모니터링 실행"""
+        print("🔍 관심 기사 모니터링 시작...")
+        
+        while True:
+            new_articles = self.check_new_interests()
+            
+            if new_articles:
+                print(f"✨ 새로운 관심 기사 {len(new_articles)}개 발견!")
+                # 웹 UI용 파일에 저장
+                with open('pending_cardnews.json', 'w', encoding='utf-8') as f:
+                    json.dump(new_articles, f, ensure_ascii=False, indent=2)
+            
+            time.sleep(interval)
+```
+
+### 2. Streamlit 웹 UI
+`card_news_app.py`
+
+```python
+import streamlit as st
+import json
+from pathlib import Path
+import anthropic
+from datetime import datetime
+
+# 페이지 설정
+st.set_page_config(
+    page_title="전력산업 카드뉴스 생성기",
+    page_icon="⚡",
+    layout="wide"
+)
+
+class CardNewsApp:
+    def __init__(self):
+        self.anthropic_client = None
+        self.setup_api()
+        
+    def setup_api(self):
+        """API 설정"""
+        api_key = st.secrets.get("ANTHROPIC_API_KEY")
+        if api_key:
+            self.anthropic_client = anthropic.Anthropic(api_key=api_key)
+    
+    def load_pending_articles(self):
+        """대기 중인 기사 로드"""
+        try:
+            with open('pending_cardnews.json', 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return []
+    
+    def generate_card_news(self, article):
+        """Claude를 통한 카드뉴스 생성"""
+        prompt = f"""
+        전력산업 관련 기사를 시각적으로 매력적인 HTML 카드뉴스로 만들어주세요.
+        
+        [기사 정보]
+        제목: {article['title']}
+        요약: {article['summary']}
+        핵심내용: {article['content']}
+        키워드: {', '.join(article.get('keywords', []))}
+        
+        [요구사항]
+        1. 다크 테마 (#0a0a0a 배경)
+        2. 주제에 맞는 색상 테마 선택
+        3. 히어로 섹션 + 핵심 인사이트 + 데이터 시각화 + 전망
+        4. 인터랙티브 애니메이션 (hover, scroll, counter)
+        5. Pretendard 폰트 사용
+        6. 반응형 디자인
+        
+        완전한 HTML 파일을 생성해주세요.
+        """
+        
+        with st.spinner('🎨 카드뉴스 생성 중...'):
+            response = self.anthropic_client.messages.create(
+                model="claude-3-opus-20240229",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=4000
+            )
+            
+        return response.content[0].text
+    
+    def run(self):
+        """앱 실행"""
+        st.title("⚡ 전력산업 카드뉴스 생성기")
+        
+        # 사이드바
+        with st.sidebar:
+            st.header("📋 설정")
+            
+            # API 키 확인
+            if not self.anthropic_client:
+                st.error("⚠️ Anthropic API 키가 설정되지 않았습니다.")
+                api_key = st.text_input("API Key", type="password")
+                if api_key:
+                    self.anthropic_client = anthropic.Anthropic(api_key=api_key)
+                    st.success("✅ API 연결 성공!")
+            
+            # 새로고침 버튼
+            if st.button("🔄 기사 목록 새로고침"):
+                st.rerun()
+        
+        # 메인 컨텐츠
+        articles = self.load_pending_articles()
+        
+        if not articles:
+            st.info("📭 카드뉴스로 만들 관심 기사가 없습니다.")
+            return
+        
+        # 기사 선택
+        st.header("📰 관심 기사 목록")
+        
+        # 기사 카드 표시
+        cols = st.columns(2)
+        for idx, article in enumerate(articles):
+            with cols[idx % 2]:
+                with st.container():
+                    st.subheader(article['title'])
+                    st.caption(f"키워드: {', '.join(article.get('keywords', []))}")
+                    st.write(article['summary'])
+                    
+                    if st.button(f"🎨 카드뉴스 생성", key=f"gen_{idx}"):
+                        self.generate_for_article(article, idx)
+    
+    def generate_for_article(self, article, idx):
+        """특정 기사의 카드뉴스 생성"""
+        st.header(f"🎨 카드뉴스 생성: {article['title']}")
+        
+        # 생성 옵션
+        col1, col2 = st.columns(2)
+        with col1:
+            color_theme = st.selectbox(
+                "색상 테마",
+                ["자동 선택", "ESS/배터리 (초록/파랑)", "태양광 (노랑/주황)", 
+                 "정책 (파랑/보라)", "문제/경고 (빨강/주황)"]
+            )
+        
+        with col2:
+            emphasis = st.multiselect(
+                "강조할 요소",
+                ["차트/그래프", "타임라인", "비교 테이블", "인용구", "통계 카운터"]
+            )
+        
+        if st.button("🚀 생성 시작"):
+            # Claude API 호출
+            html_content = self.generate_card_news(article)
+            
+            # 미리보기
+            st.subheader("👁️ 미리보기")
+            st.components.v1.html(html_content, height=800, scrolling=True)
+            
+            # 저장 옵션
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("💾 저장"):
+                    filename = f"detail_{article['title'][:30]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+                    output_path = Path("detailed") / filename
+                    output_path.parent.mkdir(exist_ok=True)
+                    
+                    with open(output_path, 'w', encoding='utf-8') as f:
+                        f.write(html_content)
+                    
+                    st.success(f"✅ 저장 완료: {filename}")
+                    
+                    # 처리 완료 표시
+                    self.mark_as_processed(article['page_id'])
+            
+            with col2:
+                if st.button("✏️ 수정 요청"):
+                    self.request_modification(html_content, article)
+            
+            with col3:
+                if st.button("🔄 다시 생성"):
+                    st.rerun()
+
+if __name__ == "__main__":
+    app = CardNewsApp()
+    app.run()
+```
+
+### 3. 통합 실행 스크립트
+`run_level2_automation.py`
+
+```python
+#!/usr/bin/env python3
+import subprocess
+import time
+from pathlib import Path
+
+def run_monitoring():
+    """백그라운드에서 관심 기사 모니터링"""
+    subprocess.Popen(['python', 'watch_interested_articles.py'])
+    print("✅ 관심 기사 모니터링 시작")
+
+def run_streamlit():
+    """Streamlit 웹 UI 실행"""
+    subprocess.run(['streamlit', 'run', 'card_news_app.py'])
+
+def main():
+    print("🚀 Level 2 자동화 시스템 시작")
+    
+    # 1. 모니터링 시작
+    run_monitoring()
+    
+    # 2. 잠시 대기
+    time.sleep(2)
+    
+    # 3. 웹 UI 실행
+    print("🌐 웹 UI 시작 중...")
+    print("브라우저에서 http://localhost:8501 접속")
+    run_streamlit()
+
+if __name__ == "__main__":
+    main()
+```
+
+## 💡 주요 기능
+
+### 1. **실시간 모니터링**
+- 5분마다 노션 체크
+- 새 관심 기사 자동 감지
+- JSON 파일로 상태 관리
+
+### 2. **웹 인터페이스**
+- 깔끔한 UI로 기사 목록 표시
+- 원클릭 카드뉴스 생성
+- 실시간 미리보기
+- 수정 요청 기능
+
+### 3. **품질 관리**
+- 생성 전: 색상 테마, 강조 요소 선택
+- 생성 후: 미리보기, 수정, 재생성
+- 완성본만 저장
+
+### 4. **비용 통제**
+- 사용자가 원하는 기사만 생성
+- 생성 횟수 추적
+- 월별 사용량 리포트
+
+## 🎯 장점
+
+1. **유연성**: 필요한 기사만 선택적 생성
+2. **품질**: 생성 과정에 사용자 개입 가능
+3. **비용**: 예측 가능한 API 사용량
+4. **사용성**: 직관적인 웹 인터페이스
+5. **확장성**: 기능 추가 용이
+
+## ⚠️ 단점
+
+1. **수동 개입**: 완전 자동화 아님
+2. **실행 필요**: 웹 서버 상시 실행
+3. **초기 설정**: API 키, 환경 구성
+
+## 💰 예상 비용
+
+- **선택적 생성**: 월 10-30개 기사
+- **비용**: $4-12/월 (5,500-16,500원)
+- **완전 자동화 대비 80% 절감**
+
+이 방식이 가장 현실적이고 실용적입니다!

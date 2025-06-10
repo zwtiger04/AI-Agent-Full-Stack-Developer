@@ -1,0 +1,58 @@
+# 🚀 카드뉴스 GitHub-Notion 연동 빠른 시작 가이드
+
+## 1️⃣ GitHub PAT 추가 (필수!)
+
+```bash
+echo "GITHUB_TOKEN=ghp_여기에_실제_토큰_입력" >> .env
+```
+
+## 2️⃣ 테스트 실행
+
+```bash
+# 샘플 폴더로 테스트
+python run_card_news_upload.py
+```
+
+## 3️⃣ 실제 카드뉴스 업로드
+
+### 방법 1: 지정 폴더 업로드
+```bash
+# 이미지를 폴더에 넣고
+python run_card_news_upload.py card_news/images/20250608_전력뉴스
+```
+
+### 방법 2: Python 코드로 직접 실행
+```python
+from card_news_uploader import CardNewsUploader
+
+uploader = CardNewsUploader()
+uploader.upload_card_news_folder(
+    "card_news/images/폴더명",
+    title="2025년 6월 전력산업 동향",
+    description="이번 주 주요 이슈",
+    keywords=["재생에너지", "ESS", "VPP"]
+)
+```
+
+## 📁 폴더 구조 예시
+
+```
+card_news/
+└── images/
+    └── 20250608_전력뉴스/
+        ├── 01_표지.png
+        ├── 02_재생에너지_현황.png
+        ├── 03_ESS_시장동향.png
+        └── 04_결론.png
+```
+
+## 🔗 업로드 후 확인
+
+1. **GitHub**: https://github.com/zwtiger04/AI-Agent-Full-Stack-Developer/tree/main/card_news
+2. **Notion**: 현재 주차 데이터베이스에 "[카드뉴스]" 제목으로 생성
+
+## ❗ 주의사항
+
+- 이미지 파일명은 순서대로 (01_, 02_ 등)
+- 파일 크기는 100MB 이하
+- GitHub PAT는 `repo` 권한 필요
