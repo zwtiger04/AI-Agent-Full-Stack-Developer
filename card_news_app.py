@@ -14,7 +14,10 @@ from pathlib import Path
 from datetime import datetime, date
 import anthropic
 from typing import List, Dict, Optional
+from update_summary import add_to_summary, update_summary_date
 import re
+from card_news.section_selector import SectionSelector  # 섹션 선택기 추가
+from card_news.section_config import SectionConfig    # 섹션 설정 추가
 
 # 페이지 설정
 st.set_page_config(
@@ -74,6 +77,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 class CostManager:
@@ -148,10 +152,28 @@ class CardNewsGenerator:
         self.anthropic_client = None
         self.pending_file = 'pending_cardnews.json'
         self.processed_file = 'processed_articles.json'
-        self.output_dir = Path("detailed")
+        self.output_dir = Path("/mnt/c/Users/KJ/Desktop/EnhancedCardNews/detailed")
         self.output_dir.mkdir(exist_ok=True)
         self.cost_manager = CostManager()
         
+    def get_color_scheme(self, keywords):
+        """키워드에 따른 색상 스키마 반환"""
+        # VPP 관련 키워드
+        if any(kw in keywords for kw in ['VPP', '가상발전소', '분산자원', '수요반응']):
+            return ['#06b6d4', '#0891b2', '#0e7490']
+        # 재생에너지 관련
+        elif any(kw in keywords for kw in ['재생에너지', '태양광', '풍력', '신재생']):
+            return ['#10b981', '#059669', '#047857']
+        # ESS 관련
+        elif any(kw in keywords for kw in ['ESS', '에너지저장', '배터리']):
+            return ['#8b5cf6', '#7c3aed', '#6d28d9']
+        # 전력시장 관련
+        elif any(kw in keywords for kw in ['전력시장', '전력거래', 'SMP']):
+            return ['#f59e0b', '#d97706', '#b45309']
+        # 기본 색상
+        else:
+            return ['#3b82f6', '#2563eb', '#1d4ed8']
+            
     def setup_api(self, api_key: str):
         """Claude API 설정"""
         try:
@@ -206,7 +228,7 @@ class CardNewsGenerator:
             return {
                 'primary': '#f59e0b',  # 노랑
                 'secondary': '#f97316',  # 주황
-                'gradient': 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)'
+                'gradient': 'linear-gradient(135deg, #f59e0b 0%, #ef4444 50%, #dc2626 100%)'
             }
         elif any(kw in keywords for kw in ['정책', '제도', '법안', '규제']):
             return {
@@ -230,12 +252,104 @@ class CardNewsGenerator:
     def generate_card_news(self, article: Dict, color_theme: Dict, emphasis: List[str]) -> str:
         """Claude API를 통한 카드뉴스 생성"""
         
+        # 섹션 스타일 CSS 파일 읽기
+        try:
+            with open('card_news/section_styles.css', 'r', encoding='utf-8') as f:
+                section_styles_css = f.read()
+        except FileNotFoundError:
+            section_styles_css = ""  # CSS 파일이 없으면 빈 문자열
+            st.warning("섹션 스타일 CSS 파일을 찾을 수 없습니다.")
+
+        
+        # 섹션 선택기 초기화 및 섹션 선택
+        section_selector = SectionSelector()
+        
+        # 기사 분석 및 섹션 추천
+        recommended_sections = section_selector.recommend_sections(article, num_sections=3)
+        
+        # 선택된 섹션 정보 로깅
+        section_names = []
+        for section_id, score in recommended_sections:
+            section_info = SectionConfig.get_section_by_id(section_id)
+            section_names.append(section_info['title'])
+        
+        st.info(f"🎯 선택된 섹션: {', '.join(section_names)}")
+        
+        # 동적 프롬프트 생성을 위한 섹션 정보 준비
+        dynamic_sections_prompt = section_selector.generate_dynamic_prompt(article, recommended_sections)
+        
+        # 선택된 섹션의 CSS 스타일 준비
+        section_styles = []
+        for section_id, _ in recommended_sections:
+            style_info = SectionConfig.get_section_style(section_id)
+            section_info = SectionConfig.get_section_by_id(section_id)
+            
+            # 각 섹션의 CSS 추가
+            section_css = f"""
+/* {section_info['title']} 섹션 스타일 */
+.{style_info['class']} {{
+    --section-color: {style_info['color']};
+    background: linear-gradient(135deg, {style_info['color']} 0%, {style_info['color']}CC 100%);
+    padding: 2rem;
+    margin: 1.5rem 0;
+    border-radius: 12px;
+    border-left: 5px solid {style_info['color']};
+}}
+
+.{style_info['class']} .section-icon {{
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}}
+"""
+            section_styles.append(section_css)
+        
+        # CSS를 하나의 문자열로 결합
+        dynamic_section_css = '\n'.join(section_styles)
+        
+        # 섹션 선택 분석 데이터 저장
+        if article.get('id'):
+            section_selector.save_selection_analytics(article['id'], recommended_sections)
+        
+        
+        
         # 강조 요소 프롬프트 생성
         emphasis_prompt = ""
         if emphasis:
             emphasis_prompt = f"\n\n특별히 강조할 요소:\n" + "\n".join([f"- {e}" for e in emphasis])
         
-        prompt = f"""당신은 전력산업 전문 웹 디자이너입니다. 다음 기사를 기반으로 시각적으로 매력적인 HTML 카드뉴스를 만들어주세요.
+                # color_theme에서 색상 추출
+        primary_color = color_theme['primary']
+        secondary_color = color_theme.get('secondary', color_theme['primary'])
+        tertiary_color = secondary_color  # 간단하게 처리
+        
+        # RGBA 값 계산 (hex to rgba)
+        def hex_to_rgba(hex_color):
+            hex_color = hex_color.lstrip('#')
+            r = int(hex_color[0:2], 16)
+            g = int(hex_color[2:4], 16)
+            b = int(hex_color[4:6], 16)
+            return f"{r}, {g}, {b}"
+        
+        rgba_primary = hex_to_rgba(primary_color)
+        color_theme['rgba_primary'] = rgba_primary
+        
+        prompt = f"""당신은 전력산업 전문 웹 디자이너입니다. 아래 지침을 반드시 준수하여 카드뉴스를 생성하세요.
+
+[⚠️ 시사점 작성 필수 지침]
+5번 섹션(핵심 시사점 및 향후 전망)을 작성할 때:
+1. "기사 내용을 바탕으로..." 같은 템플릿 문구를 절대 사용하지 마세요
+2. 실제 기사 내용을 분석하여 구체적인 시사점을 작성하세요
+3. 다음 내용을 반드시 포함하세요:
+   - 이 기사가 전력산업에 미치는 실질적 영향 (구체적 수치나 예상 효과 포함)
+   - 관련 기업들이 실제로 취해야 할 행동 (구체적인 전략이나 준비사항)
+   - 시장 변화 예측 (단기/중기/장기로 구분하여 구체적으로)
+4. 일반적이고 뻔한 내용이 아닌, 이 기사 특유의 시사점을 도출하세요
+
+[⚠️ 필수 준수사항]
+1. ❌ 절대 외부 CSS/JS 파일 참조 금지 - <link href="styles.css">, <script src="animations.js"> 등 사용 금지!
+2. ✅ 모든 스타일은 반드시 <style> 태그 내에 인라인으로 포함
+3. ✅ 완전히 독립적인 단일 HTML 파일로 생성
+4. ✅ 아래 Enhanced 스타일 가이드의 모든 CSS를 <style> 태그 안에 포함
 
 [기사 정보]
 제목: {article['title']}
@@ -244,28 +358,256 @@ class CardNewsGenerator:
 키워드: {', '.join(article.get('keywords', []))}
 원문 URL: {article.get('url', '')}
 
-[색상 테마]
-- 주 색상: {color_theme['primary']}
-- 보조 색상: {color_theme['secondary']}
-- 그라데이션: {color_theme['gradient']}
+[Enhanced 스타일 가이드 - 디폴트 양식 필수 준수사항]
 
-[필수 요구사항]
-1. 다크 테마 배경 (#0a0a0a)
-2. Pretendard 폰트 사용
-3. 반응형 디자인 (모바일 최적화)
-4. 스크롤 애니메이션 (fadeInUp, slideIn 등)
-5. 인터랙티브 요소 (hover 효과, 카운터 애니메이션)
+⚠️ 중요: 아래의 모든 CSS는 반드시 <style> 태그 안에 포함하세요!
+절대로 외부 CSS 파일(styles.css 등)을 만들거나 참조하지 마세요!
+
+## 1. 필수 기본 설정
+/* CSS CODE START - 반드시 모든 스타일을 <style> 태그 안에 포함! */
+
+/* ========== 동적으로 선택된 섹션 스타일 ========== */
+{dynamic_section_css}
+
+/* ========== 기본 스타일 계속 ========== */
+
+/* ========== 섹션 공통 스타일 ========== */
+{section_styles_css}
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+/* 기본 설정 */
+* {{ margin: 0; padding: 0; box-sizing: border-box; }}
+body {{
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: #0a0a0a;
+    color: #ffffff;
+    line-height: 1.8;
+    font-size: 1.1rem;  /* 디폴트 본문 크기 */
+}}
+
+/* 필수 폰트 크기 - 디폴트 양식과 동일하게! */
+h1 {{ font-size: 3rem; font-weight: 800; }}
+h2 {{ font-size: 2.5rem; margin-bottom: 2rem; }}
+.subtitle {{ font-size: 1.1rem; opacity: 0.9; }}
+.insight-icon {{ font-size: 3rem; margin-bottom: 1rem; }}
+.stat-number {{ font-size: 3rem; font-weight: 700; }}
+/* CODE END */
+
+## 2. 색상 테마 (3색 그라데이션 필수)
+현재 기사 테마:
+- 주색상: {color_theme['primary']}
+- 중간색: {color_theme.get('secondary', color_theme['primary'])}
+- 끝색상: {color_theme.get('tertiary', color_theme['secondary'])}
+- 그라데이션: {color_theme['gradient']}
+- RGBA: rgba({color_theme.get('rgba_primary', '99, 102, 241')}, 알파값)
+
+## 3. 히어로 섹션 (복잡한 배경 효과 필수)
+/* CSS CODE START */
+.hero {{
+    background: {color_theme['gradient']};
+    min-height: 500px;
+    position: relative;
+    overflow: hidden;
+}}
+.hero::before {{
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba({color_theme.get('rgba_primary', '99, 102, 241')}, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba({color_theme.get('rgba_primary', '99, 102, 241')}, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba({color_theme.get('rgba_primary', '99, 102, 241')}, 0.2) 0%, transparent 50%);
+    animation: float 15s ease-in-out infinite;
+}}
+/* CODE END */
+
+## 4. 홈 버튼 (우상단 고정)
+<!-- HTML CODE START -->
+<a href="../improved_summary.html" class="home-button">🏠</a>
+/* CODE END */
+/* CSS CODE START */
+.home-button {{
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    background: rgba({color_theme.get('rgba_primary', '99, 102, 241')}, 0.2);
+    border: 2px solid rgba({color_theme.get('rgba_primary', '99, 102, 241')}, 0.5);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+}}
+/* CODE END */
+
+## 5. 필수 클래스명 (정확히 사용)
+- container (NOT wrapper)
+- section fade-in (NOT section만)
+- insight-grid, insight-card, insight-icon, insight-title
+- stats-grid, stat-card counter, stat-value, stat-label
+- timeline, timeline-item, timeline-marker, timeline-content
+- expert-quote
+
+## 5-1. 전문가 인용문 스타일
+/* CSS CODE START */
+.expert-quote {{
+    position: relative;
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 4px solid {color_theme['primary']};
+    padding: 30px 40px;
+    margin: 30px 0;
+    font-style: italic;
+    font-size: 1.2rem;
+    line-height: 1.8;
+    border-radius: 0 15px 15px 0;
+}}
+.expert-quote::before {{
+    content: '"';
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    font-size: 4rem;
+    color: {color_theme['primary']};
+    opacity: 0.3;
+    font-family: Georgia, serif;
+}}
+.expert-quote p {{
+    margin-top: 20px;
+    font-size: 0.9rem;
+    opacity: 0.8;
+    text-align: right;
+    font-style: normal;
+}}
+/* CODE END */
+
+## 6. 카드 hover 효과
+/* CSS CODE START */
+.insight-card {{
+    background: rgba({color_theme.get('rgba_primary', '99, 102, 241')}, 0.1);
+    border: 1px solid rgba({color_theme.get('rgba_primary', '99, 102, 241')}, 0.3);
+    transition: all 0.3s;
+}}
+.insight-card:hover {{
+    transform: translateY(-10px);
+    box-shadow: 0 10px 30px rgba({color_theme.get('rgba_primary', '99, 102, 241')}, 0.3);
+}}
+/* CODE END */
+
+## 7. 필수 섹션 (정확한 제목과 구조)
+1. 🎯 핵심 인사이트 - insight-grid에 insight-card 3개
+2. 📊 주요 성과 및 지표 - stats-grid에 stat-card 4개
+3. 🌍 진행 경과 - timeline 구조
+4. 💬 전문가 의견 - expert-quote
+5. 🔮 시사점 및 전망 - 추가 insight-grid
+
+## 8. 애니메이션 (자체 CSS)
+/* CSS CODE START */
+/* 필수 애니메이션 - 디폴트 양식과 동일! */
+@keyframes float {{
+    0%, 100% {{ transform: translate(0, 0) rotate(0deg); }}
+    33% {{ transform: translate(30px, -30px) rotate(120deg); }}
+    66% {{ transform: translate(-20px, 20px) rotate(240deg); }}
+}}
+
+@keyframes fadeInUp {{
+    from {{ opacity: 0; transform: translateY(30px); }}
+    to {{ opacity: 1; transform: translateY(0); }}
+}}
+
+@keyframes countUp {{
+    from {{ opacity: 0; transform: scale(0.5); }}
+    to {{ opacity: 1; transform: scale(1); }}
+}}
+.fade-in {{
+    opacity: 0;
+    animation: fadeInUp 0.8s ease forwards;
+}}
+/* CODE END */
+
 {emphasis_prompt}
 
-[구조]
-1. 히어로 섹션: 제목, 날짜, 배경 애니메이션
-2. 핵심 인사이트: 3-4개 주요 포인트 (아이콘 포함)
-3. 상세 분석: 카드 형태로 정보 구성
-4. 데이터 시각화: 관련 통계나 수치 표현
-5. 전망/의견: 미래 전망이나 전문가 의견
-6. 홈 버튼: 우상단 고정
+[HTML 구조 템플릿]
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제목 - 전력산업 뉴스</title>
+    <style>
+        /* 모든 CSS는 여기에! 외부 파일 참조 금지! */
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        /* 위에서 제공한 Enhanced 스타일 가이드의 모든 CSS를 여기에 포함하세요 */
+        /* body, container, home-button, hero, 모든 섹션 스타일 등 */
+    </style>
+</head>
+<body>
+    <a href="../improved_summary.html" class="home-button">🏠</a>
+    <!-- 컨텐츠 -->
+</body>
+</html>
 
-완전한 HTML 파일을 생성해주세요. CSS는 <style> 태그 안에, JavaScript는 <script> 태그 안에 포함시켜주세요."""
+반드시 위 구조를 따르고, 절대 style.css나 animations.js 같은 외부 파일을 참조하지 마세요!
+모든 스타일은 <style> 태그 안에 직접 작성하세요.
+
+[컨텐츠 구성 가이드라인 - 필수!]
+기사 내용을 분석하여 다음과 같이 동적으로 선택된 섹션들을 포함하여 구성하세요:
+
+{dynamic_sections_prompt}
+
+⚠️ 중요: 위에서 지정된 섹션 순서와 구조를 정확히 따라주세요!
+
+[섹션별 스타일 가이드]
+   <!-- 반드시 이 섹션을 포함하세요! AI가 분석한 내용을 작성합니다 -->
+   <section class="fade-in">
+       <h2>🔮 핵심 시사점 및 향후 전망</h2>
+       <!-- expert-quote 대신 다른 스타일 사용 -->
+       <div style="background: linear-gradient(135deg, rgba({rgba_primary}, 0.1), rgba({rgba_primary}, 0.05)); 
+                   border: 2px solid rgba({rgba_primary}, 0.3); 
+                   border-radius: 20px; 
+                   padding: 40px;
+                   position: relative;
+                   overflow: hidden;">
+           <!-- 배경 장식 -->
+           <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; 
+                       background: radial-gradient(circle, rgba({rgba_primary}, 0.1), transparent); 
+                       border-radius: 50%;"></div>
+           
+           <h3 style="color: {primary_color}; margin-bottom: 30px; font-size: 1.5rem;">
+               <span style="display: inline-block; margin-right: 10px;">🔍</span>
+               산업 영향 분석
+           </h3>
+           <p style="line-height: 1.8; margin-bottom: 30px;">
+               이 기사가 전력산업에 미치는 구체적인 영향을 분석하여 작성하세요.
+               단기적 영향과 장기적 변화를 구분하여 설명하세요.
+           </p>
+           
+           <h3 style="color: {primary_color}; margin-bottom: 20px; font-size: 1.5rem;">
+               <span style="display: inline-block; margin-right: 10px;">🎯</span>
+               기업 대응 전략
+           </h3>
+           <ul style="list-style: none; padding: 0; margin-bottom: 30px;">
+               <li style="margin-bottom: 15px; padding-left: 30px; position: relative;">
+                   <span style="position: absolute; left: 0; color: {primary_color};">▶</span>
+                   관련 기업들이 준비해야 할 구체적인 대응 방안 1
+               </li>
+               <li style="margin-bottom: 15px; padding-left: 30px; position: relative;">
+                   <span style="position: absolute; left: 0; color: {primary_color};">▶</span>
+                   시장 변화에 대응하기 위한 전략적 준비사항 2
+               </li>
+               <li style="margin-bottom: 15px; padding-left: 30px; position: relative;">
+                   <span style="position: absolute; left: 0; color: {primary_color};">▶</span>
+                   새로운 기회 요인과 활용 방안 3
+               </li>
+           </ul>
+           
+           <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; margin-top: 30px;">
+               <h4 style="color: {primary_color}; margin-bottom: 15px;">📅 향후 전망</h4>
+               <p style="margin: 0;">
+                   앞으로의 시장 전망과 예상되는 변화를 구체적으로 작성하세요.
+                   시기별(단기/중기/장기) 전망을 포함하면 더 좋습니다.
+               </p>
+           </div>
+       </div>
+   </section>"""
 
         try:
             response = self.anthropic_client.messages.create(
@@ -277,8 +619,16 @@ class CardNewsGenerator:
             # 비용 기록
             self.cost_manager.add_cost(COST_PER_REQUEST)
             
-            # HTML 추출
-            content = response.content[0].text
+            # HTML 추출 (마크다운 코드블록 처리)
+            raw_content = response.content[0].text
+            
+            # 마크다운 코드블록에서 HTML 추출
+            html_match = re.search(r'```html\s*(.*?)```', raw_content, re.DOTALL)
+            if html_match:
+                content = html_match.group(1).strip()
+            else:
+                # 코드블록이 없으면 전체 내용 사용
+                content = raw_content
             
             # HTML 태그가 없으면 기본 구조 추가
             if not content.strip().startswith('<!DOCTYPE') and not content.strip().startswith('<html'):
@@ -505,6 +855,24 @@ def main():
                                             # 처리 완료 표시
                                             generator.mark_as_processed(article['page_id'])
                                             st.rerun()
+                                    
+                                    # 파일을 detailed 폴더에 자동 저장
+                                    detailed_dir = generator.output_dir
+                                    detailed_dir.mkdir(exist_ok=True)
+                                    
+                                    file_path = detailed_dir / filename
+                                    with open(file_path, 'w', encoding='utf-8') as f:
+                                        f.write(html_content)
+                                    
+                                    st.info(f"📁 파일이 자동 저장되었습니다: {file_path}")
+                                    
+                                    # 요약 페이지에 추가
+                                    try:
+                                        if add_to_summary(article, str(file_path), str(generator.output_dir)):
+                                            st.success("📝 요약 페이지에 추가되었습니다!")
+                                            update_summary_date()
+                                    except Exception as e:
+                                        st.warning(f"요약 페이지 업데이트 실패: {e}")
                                     
                                     with col2:
                                         # 다운로드

@@ -1,0 +1,620 @@
+"""
+카드뉴스 섹션 사용 패턴 분석 모듈
+작성일: 2025-06-12
+작업 ID: SECTION-007
+"""
+
+import json
+import os
+import logging
+import time
+import shutil
+from datetime import datetime, timedelta
+from typing import Dict, List, Tuple, Union, Optional
+from collections import defaultdict, Counter
+
+# matplotlib 설정
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
+
+# 로깅 설정
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# 상위 디렉토리를 sys.path에 추가
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from card_news.section_config import SectionConfig
+
+
+class SectionAnalytics:
+    """카드뉴스 섹션 사용 패턴 분석"""
+    
+    def __init__(self):
+        self.project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.data_file = os.path.join(self.project_root, 'section_analytics.json')
+        self.config = SectionConfig()
+        self._ensure_data_file()
+        
+        if MATPLOTLIB_AVAILABLE:
+            self._setup_korean_font()
+    
+    def _setup_korean_font(self):
+        """한글 폰트 설정"""
+        try:
+            fonts = ['NanumGothic', 'DejaVu Sans']
+            for font in fonts:
+                try:
+                    plt.rcParams['font.family'] = font
+                    plt.rcParams['axes.unicode_minus'] = False
+                    break
+                except:
+                    continue
+        except:
+            plt.rcParams['font.family'] = 'DejaVu Sans'
+    
+    def _ensure_data_file(self):
+        """데이터 파일이 없으면 생성"""
+        if not os.path.exists(self.data_file):
+            initial_data = {
+                'selections': [],
+                'section_counts': {},
+                'metadata': {
+                    'created_at': datetime.now().isoformat(),
+                    'last_updated': datetime.now().isoformat(),
+                    'version': '1.0'
+                }
+            }
+            self.save_data(initial_data)
+    
+    def load_data(self) -> Dict:
+        """데이터 파일 로드"""
+        try:
+            with open(self.data_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return self._migrate_old_data(data)
+        except FileNotFoundError:
+            return {'selections': [], 'section_counts': {}}
+        except json.JSONDecodeError:
+            return {'selections': [], 'section_counts': {}}
+    
+    def save_data(self, data: Dict):
+        """데이터 파일 저장"""
+        try:
+            if os.path.exists(self.data_file):
+                shutil.copy(self.data_file, f"{self.data_file}.backup")
+            
+            if 'metadata' not in data:
+                data['metadata'] = {}
+            data['metadata']['last_updated'] = datetime.now().isoformat()
+            
+            temp_file = f"{self.data_file}.tmp"
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            
+            os.replace(temp_file, self.data_file)
+            
+        except Exception as e:
+            logger.error(f"Data save failed: {e}")
+            raise
+    
+    def _migrate_old_data(self, data: Dict) -> Dict:
+        """이전 버전 데이터 마이그레이션"""
+        for selection in data.get('selections', []):
+            if 'article_keywords' not in selection:
+                selection['article_keywords'] = []
+        
+        if 'metadata' not in data:
+            data['metadata'] = {
+                'created_at': datetime.now().isoformat(),
+                'version': '1.0'
+            }
+        
+        return data
+    
+    def add_selection(self, article_id: str, sections: List[str], 
+                     scores: Dict[str, int], keywords: List[str] = None):
+        """새로운 섹션 선택 데이터 추가"""
+        try:
+            data = self.load_data()
+            
+            new_record = {
+                'article_id': article_id,
+                'timestamp': datetime.now().isoformat(),
+                'sections': sections,
+                'scores': scores
+            }
+            
+            if keywords:
+                new_record['article_keywords'] = keywords
+            else:
+                new_record['article_keywords'] = []
+            
+            data['selections'].append(new_record)
+            
+            if 'section_counts' not in data:
+                data['section_counts'] = {}
+            
+            for section in sections:
+                data['section_counts'][section] = data['section_counts'].get(section, 0) + 1
+            
+            self.save_data(data)
+            logger.info(f"Selection data added: {article_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to add selection: {e}")
+            raise
+    
+    def get_section_usage_stats(self) -> Dict[str, Dict]:
+        """섹션별 사용 통계 반환"""
+        try:
+            data = self.load_data()
+            selections = data.get('selections', [])
+            
+            if not selections:
+                return {}
+            
+            section_stats = defaultdict(lambda: {
+                'count': 0,
+                'scores': [],
+                'timestamps': []
+            })
+            
+            for selection in selections:
+                for section in selection.get('sections', []):
+                    section_stats[section]['count'] += 1
+                    scores = selection.get('scores', {})
+                    if section in scores:
+                        section_stats[section]['scores'].append(scores[section])
+                    section_stats[section]['timestamps'].append(selection['timestamp'])
+            
+            total_uses = sum(stats['count'] for stats in section_stats.values())
+            result = {}
+            
+            for section_id, stats in section_stats.items():
+                result[section_id] = {
+                    'count': stats['count'],
+                    'percentage': round((stats['count'] / total_uses * 100) if total_uses > 0 else 0, 1),
+                    'avg_score': round(sum(stats['scores']) / len(stats['scores']) if stats['scores'] else 0, 1),
+                    'trend': self._calculate_trend(stats['timestamps'])
+                }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to get usage stats: {e}")
+            return {}
+    
+    def _calculate_trend(self, timestamps: List[str]) -> str:
+        """최근 추세 계산"""
+        if len(timestamps) < 3:
+            return 'stable'
+        
+        try:
+            recent = []
+            older = []
+            cutoff = datetime.now() - timedelta(days=7)
+            
+            for ts in timestamps:
+                dt = datetime.fromisoformat(ts)
+                if dt > cutoff:
+                    recent.append(dt)
+                else:
+                    older.append(dt)
+            
+            if not older:
+                return 'increasing'
+            
+            if len(recent) > len(older) * 1.2:
+                return 'increasing'
+            elif len(recent) < len(older) * 0.8:
+                return 'decreasing'
+            else:
+                return 'stable'
+                
+        except:
+            return 'stable'
+    
+    def get_temporal_patterns(self, period: str = 'daily') -> Dict:
+        """시간대별 섹션 사용 패턴 분석"""
+        try:
+            data = self.load_data()
+            selections = data.get('selections', [])
+            
+            patterns = defaultdict(lambda: defaultdict(int))
+            
+            for selection in selections:
+                try:
+                    timestamp = datetime.fromisoformat(selection['timestamp'])
+                    
+                    if period == 'hourly':
+                        key = timestamp.hour
+                    elif period == 'daily':
+                        key = timestamp.strftime('%A')
+                    elif period == 'weekly':
+                        key = timestamp.isocalendar()[1]
+                    else:
+                        key = timestamp.date().isoformat()
+                    
+                    for section in selection.get('sections', []):
+                        patterns[key][section] += 1
+                        
+                except Exception as e:
+                    logger.warning(f"Timestamp parsing error: {e}")
+                    continue
+            
+            return dict(patterns)
+            
+        except Exception as e:
+            logger.error(f"Temporal pattern analysis failed: {e}")
+            return {}
+    
+    def get_keyword_section_correlation(self) -> Dict[str, List[Tuple[str, float]]]:
+        """키워드별로 가장 많이 사용되는 섹션 분석"""
+        try:
+            data = self.load_data()
+            selections = data.get('selections', [])
+            
+            keyword_section_counts = defaultdict(lambda: defaultdict(int))
+            keyword_counts = defaultdict(int)
+            
+            for selection in selections:
+                keywords = selection.get('article_keywords', [])
+                sections = selection.get('sections', [])
+                
+                for keyword in keywords:
+                    keyword_counts[keyword] += 1
+                    for section in sections:
+                        keyword_section_counts[keyword][section] += 1
+            
+            correlations = {}
+            for keyword, section_counts in keyword_section_counts.items():
+                total = keyword_counts[keyword]
+                correlations[keyword] = [
+                    (section, round(count / total, 2)) 
+                    for section, count in sorted(
+                        section_counts.items(), 
+                        key=lambda x: x[1], 
+                        reverse=True
+                    )[:3]
+                ]
+            
+            return correlations
+            
+        except Exception as e:
+            logger.error(f"Keyword correlation analysis failed: {e}")
+            return {}
+    
+    def analyze_selection_accuracy(self) -> Dict[str, Union[float, Dict, List]]:
+        """섹션 선택의 정확도 분석"""
+        try:
+            data = self.load_data()
+            selections = data.get('selections', [])
+            
+            if not selections:
+                return {
+                    'overall_accuracy': 0.0,
+                    'by_section': {},
+                    'improvement_suggestions': ["데이터가 부족합니다."]
+                }
+            
+            all_scores = []
+            section_scores = defaultdict(list)
+            
+            for selection in selections:
+                scores = selection.get('scores', {})
+                for section, score in scores.items():
+                    all_scores.append(score)
+                    section_scores[section].append(score)
+            
+            if not all_scores:
+                return {
+                    'overall_accuracy': 0.0,
+                    'by_section': {},
+                    'improvement_suggestions': ["점수 데이터가 없습니다."]
+                }
+            
+            accuracy_threshold = 8
+            overall_accuracy = len([s for s in all_scores if s >= accuracy_threshold]) / len(all_scores)
+            
+            by_section = {}
+            for section, scores in section_scores.items():
+                if scores:
+                    accurate_count = len([s for s in scores if s >= accuracy_threshold])
+                    by_section[section] = round(accurate_count / len(scores), 2)
+            
+            suggestions = []
+            for section, accuracy in by_section.items():
+                if accuracy < 0.6:
+                    section_name = self.config.SECTIONS.get(section, {}).get('title', section)
+                    suggestions.append(f"{section_name}({section}) 섹션의 트리거 단어 재검토 필요 (정확도: {accuracy*100:.0f}%)")
+            
+            return {
+                'overall_accuracy': round(overall_accuracy, 2),
+                'by_section': by_section,
+                'improvement_suggestions': suggestions
+            }
+            
+        except Exception as e:
+            logger.error(f"Accuracy analysis failed: {e}")
+            return {
+                'overall_accuracy': 0.0,
+                'by_section': {},
+                'improvement_suggestions': [f"분석 중 오류 발생: {str(e)}"]
+            }
+    
+    def find_underutilized_sections(self, threshold: float = 0.1) -> List[Dict]:
+        """사용률이 낮은 섹션 찾기"""
+        try:
+            stats = self.get_section_usage_stats()
+            underutilized = []
+            
+            for section_id, section_info in self.config.SECTIONS.items():
+                if section_id not in stats:
+                    underutilized.append({
+                        'section_id': section_id,
+                        'section_name': section_info['title'],
+                        'usage_rate': 0.0,
+                        'recommendation': '트리거 단어 추가 또는 섹션 재설계 고려'
+                    })
+                else:
+                    usage_rate = stats[section_id]['percentage'] / 100
+                    if usage_rate < threshold:
+                        underutilized.append({
+                            'section_id': section_id,
+                            'section_name': section_info['title'],
+                            'usage_rate': usage_rate,
+                            'avg_score': stats[section_id]['avg_score'],
+                            'recommendation': self._get_improvement_recommendation(
+                                stats[section_id]['avg_score'],
+                                usage_rate
+                            )
+                        })
+            
+            underutilized.sort(key=lambda x: x['usage_rate'])
+            return underutilized
+            
+        except Exception as e:
+            logger.error(f"Underutilized analysis failed: {e}")
+            return []
+    
+    def _get_improvement_recommendation(self, avg_score: float, usage_rate: float) -> str:
+        """개선 권고사항 생성"""
+        if avg_score >= 7 and usage_rate < 0.1:
+            return "품질은 좋으나 활용도가 낮음 - 트리거 단어 확대 필요"
+        elif avg_score < 5:
+            return "품질과 활용도 모두 낮음 - 섹션 재설계 고려"
+        else:
+            return "트리거 조건 완화 검토"
+    
+    def suggest_trigger_improvements(self) -> Dict[str, Dict[str, List[str]]]:
+        """트리거 단어 개선 제안"""
+        try:
+            correlations = self.get_keyword_section_correlation()
+            accuracy = self.analyze_selection_accuracy()
+            
+            suggestions = {
+                'add_triggers': defaultdict(list),
+                'modify_triggers': defaultdict(list)
+            }
+            
+            for keyword, section_correlations in correlations.items():
+                for section, correlation in section_correlations:
+                    if correlation > 0.7:
+                        section_info = self.config.SECTIONS.get(section, {})
+                        current_triggers = section_info.get('triggers', [])
+                        if keyword not in current_triggers:
+                            suggestions['add_triggers'][section].append(keyword)
+            
+            for section, acc in accuracy.get('by_section', {}).items():
+                if acc < 0.5:
+                    section_name = self.config.SECTIONS.get(section, {}).get('title', section)
+                    suggestions['modify_triggers'][section].append(
+                        f"{section_name}: 현재 정확도 {acc*100:.0f}% - 트리거 재검토 필요"
+                    )
+            
+            return {k: dict(v) for k, v in suggestions.items() if v}
+            
+        except Exception as e:
+            logger.error(f"Trigger improvement suggestions failed: {e}")
+            return {}
+    
+    def generate_weekly_report(self, weeks_back: int = 0) -> str:
+        """주간 분석 리포트 생성"""
+        try:
+            today = datetime.now()
+            week_start = today - timedelta(days=today.weekday() + weeks_back * 7)
+            week_end = week_start + timedelta(days=6)
+            
+            data = self.load_data()
+            selections = data.get('selections', [])
+            
+            week_selections = []
+            for s in selections:
+                try:
+                    sel_time = datetime.fromisoformat(s['timestamp'])
+                    if week_start <= sel_time <= week_end:
+                        week_selections.append(s)
+                except:
+                    continue
+            
+            # 리포트 헤더
+            report = f"# 📊 카드뉴스 섹션 분석 리포트\n\n"
+            report += f"**기간**: {week_start.strftime('%Y-%m-%d')} ~ {week_end.strftime('%Y-%m-%d')}  \n"
+            report += f"**생성일**: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
+            
+            # 주요 지표
+            report += "## 📈 주요 지표\n\n"
+            report += f"- **총 카드뉴스 생성**: {len(week_selections)}개\n"
+            
+            unique_sections = set(s for sel in week_selections for s in sel.get('sections', []))
+            report += f"- **사용된 고유 섹션**: {len(unique_sections)}개\n"
+            
+            avg_sections = sum(len(sel.get('sections', [])) for sel in week_selections) / len(week_selections) if week_selections else 0
+            report += f"- **평균 섹션 수**: {avg_sections:.1f}개\n\n"
+            
+            # TOP 5 섹션
+            report += "## 🏆 가장 많이 사용된 섹션 TOP 5\n"
+            
+            if week_selections:
+                week_section_counts = Counter()
+                for sel in week_selections:
+                    for section in sel.get('sections', []):
+                        week_section_counts[section] += 1
+                
+                for i, (section, count) in enumerate(week_section_counts.most_common(5), 1):
+                    section_name = self.config.SECTIONS.get(section, {}).get('title', section)
+                    percentage = (count / len(week_selections) * 100) if week_selections else 0
+                    report += f"\n{i}. **{section_name}** - {count}회 ({percentage:.0f}%)"
+            else:
+                report += "\n*이번 주 데이터가 없습니다.*"
+            
+            # 정확도 분석
+            accuracy = self.analyze_selection_accuracy()
+            report += f"\n\n## 🎯 선택 정확도\n\n"
+            report += f"- **전체 정확도**: {accuracy['overall_accuracy']*100:.0f}%\n"
+            report += f"- **개선이 필요한 섹션**: {len(accuracy.get('improvement_suggestions', []))}개\n"
+            
+            if accuracy.get('improvement_suggestions'):
+                report += "\n### 개선 제안\n"
+                for suggestion in accuracy['improvement_suggestions']:
+                    report += f"- {suggestion}\n"
+            
+            # 저활용 섹션
+            underutilized = self.find_underutilized_sections()
+            if underutilized:
+                report += f"\n## ⚠️ 저활용 섹션 ({len(underutilized)}개)\n"
+                for section in underutilized[:3]:
+                    report += f"\n- **{section['section_name']}**\n"
+                    report += f"  - 사용률: {section['usage_rate']*100:.0f}%\n"
+                    report += f"  - 권고: {section['recommendation']}\n"
+            
+            report += "\n\n---\n*이 리포트는 자동으로 생성되었습니다.*"
+            
+            return report
+            
+        except Exception as e:
+            logger.error(f"Report generation failed: {e}")
+            return f"# 리포트 생성 실패\n\n오류: {str(e)}"
+    
+    def create_visualization(self, chart_type: str = 'usage', save_path: str = None):
+        """분석 차트 생성"""
+        if not MATPLOTLIB_AVAILABLE:
+            logger.warning("matplotlib not available")
+            return None
+        
+        try:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            
+            if chart_type == 'usage':
+                stats = self.get_section_usage_stats()
+                if stats:
+                    sections = []
+                    counts = []
+                    
+                    for section_id, stat in sorted(stats.items(), key=lambda x: x[1]['count'], reverse=True)[:10]:
+                        section_name = self.config.SECTIONS.get(section_id, {}).get('title', section_id)
+                        sections.append(section_name)
+                        counts.append(stat['count'])
+                    
+                    ax.barh(sections, counts)
+                    ax.set_xlabel('Usage Count')
+                    ax.set_title('Section Usage Statistics')
+                else:
+                    ax.text(0.5, 0.5, 'No data available', ha='center', va='center')
+            
+            elif chart_type == 'accuracy':
+                accuracy = self.analyze_selection_accuracy()
+                by_section = accuracy.get('by_section', {})
+                
+                if by_section:
+                    sections = []
+                    accuracies = []
+                    
+                    for section, acc in by_section.items():
+                        section_name = self.config.SECTIONS.get(section, {}).get('title', section)
+                        sections.append(section_name)
+                        accuracies.append(acc * 100)
+                    
+                    ax.bar(sections, accuracies)
+                    ax.axhline(y=80, color='r', linestyle='--', label='Target (80%)')
+                    ax.set_ylabel('Accuracy (%)')
+                    ax.set_title('Section Selection Accuracy')
+                    ax.legend()
+                    plt.xticks(rotation=45, ha='right')
+                else:
+                    ax.text(0.5, 0.5, 'No data available', ha='center', va='center')
+            
+            plt.tight_layout()
+            
+            if save_path:
+                plt.savefig(save_path, dpi=300, bbox_inches='tight')
+                logger.info(f"Chart saved: {save_path}")
+            
+            return fig
+            
+        except Exception as e:
+            logger.error(f"Chart creation failed: {e}")
+            return None
+    
+    def export_insights(self, format: str = 'json') -> Union[Dict, str]:
+        """인사이트 내보내기"""
+        try:
+            if format == 'json':
+                insights = {
+                    'generated_at': datetime.now().isoformat(),
+                    'usage_stats': self.get_section_usage_stats(),
+                    'accuracy_analysis': self.analyze_selection_accuracy(),
+                    'underutilized_sections': self.find_underutilized_sections(),
+                    'trigger_suggestions': self.suggest_trigger_improvements(),
+                    'keyword_correlations': self.get_keyword_section_correlation()
+                }
+                return insights
+                
+            elif format == 'markdown':
+                return self.generate_weekly_report()
+                
+            else:
+                raise ValueError(f"Unsupported format: {format}")
+                
+        except Exception as e:
+            logger.error(f"Export failed: {e}")
+            if format == 'json':
+                return {'error': str(e)}
+            else:
+                return f"# 내보내기 실패\n\n오류: {str(e)}"
+
+
+
+    def get_best_sections_for_keyword(self, keyword: str, top_n: int = 3) -> List[Tuple[str, float]]:
+        """특정 키워드에 가장 적합한 섹션 추천"""
+        keyword_correlation = self.get_keyword_section_correlation()
+        
+        # 키워드가 데이터에 있으면 해당 섹션 반환
+        if keyword in keyword_correlation:
+            return keyword_correlation[keyword][:top_n]
+        
+        # 없으면 전체 섹션 성능 기반으로 반환
+        # 전체 섹션 사용 통계 기반으로 반환
+        section_stats = self.get_section_usage_stats()
+        section_scores = {section: stats.get("satisfaction_avg", 0) for section, stats in section_stats.items()}
+        sorted_sections = sorted(section_scores.items(), key=lambda x: x[1], reverse=True)
+        return [(section, score) for section, score in sorted_sections[:top_n]]
+
+if __name__ == '__main__':
+    analytics = SectionAnalytics()
+    print("✅ SectionAnalytics 모듈 로드 성공")
+    
+    stats = analytics.get_section_usage_stats()
+    if stats:
+        print("\n📊 섹션 사용 통계:")
+        for section, stat in stats.items():
+            print(f"  - {section}: {stat['count']}회 ({stat['percentage']}%)")
+    else:
+        print("\n📊 아직 데이터가 없습니다.")

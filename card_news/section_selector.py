@@ -1,0 +1,241 @@
+"""
+전력산업 카드뉴스 섹션 선택기
+기사 내용을 분석하여 최적의 섹션 3개를 선택
+"""
+import re
+import json
+import logging
+from typing import List, Dict, Tuple, Optional
+from collections import Counter
+from datetime import datetime
+
+from .section_config import SectionConfig
+
+class SectionSelector:
+    """기사 내용에 따라 적절한 섹션을 선택하는 클래스"""
+    
+    def __init__(self):
+        self.config = SectionConfig()
+        self.logger = logging.getLogger(__name__)
+        
+    def analyze_article(self, article: Dict) -> Dict[str, int]:
+        """
+        기사를 분석하여 각 섹션별 점수를 계산
+        
+        Args:
+            article: 기사 정보 딕셔너리 (title, content, keywords 등)
+            
+        Returns:
+            섹션별 점수 딕셔너리
+        """
+        scores = {}
+        
+        # 분석할 텍스트 준비
+        text_to_analyze = f"{article.get('title', '')} {article.get('content', '')} {' '.join(article.get('keywords', []))}"
+        text_lower = text_to_analyze.lower()
+        
+        # 각 섹션별 점수 계산
+        for section_id, section_info in self.config.SECTIONS.items():
+            score = 0
+            trigger_words = section_info.get('trigger_words', [])
+            
+            # 트리거 단어 매칭
+            for trigger in trigger_words:
+                # 정확한 단어 매칭 (부분 문자열이 아닌 전체 단어)
+                if trigger.lower() in text_lower:
+                    # 제목에 있으면 가중치 높임
+                    if trigger.lower() in article.get('title', '').lower():
+                        score += 3
+                    else:
+                        score += 1
+                    
+                    # 키워드에 있으면 추가 점수
+                    if trigger in article.get('keywords', []):
+                        score += 2
+            
+            # 특수 케이스 처리
+            score = self._apply_special_rules(section_id, article, score)
+            
+            scores[section_id] = score
+            
+        return scores
+    
+    def _apply_special_rules(self, section_id: str, article: Dict, base_score: int) -> int:
+        """
+        섹션별 특수 규칙 적용
+        
+        Args:
+            section_id: 섹션 ID
+            article: 기사 정보
+            base_score: 기본 점수
+            
+        Returns:
+            조정된 점수
+        """
+        content = article.get('content', '').lower()
+        
+        # 통계 섹션: 숫자가 많으면 점수 증가
+        if section_id == 'statistics':
+            numbers = re.findall(r'\d+\.?\d*%?', content)
+            if len(numbers) > 5:
+                base_score += 3
+            elif len(numbers) > 2:
+                base_score += 1
+        
+        # 비교 섹션: 비교 표현이 있으면 점수 증가
+        elif section_id == 'comparison':
+            comparison_patterns = ['보다', '비해', '대비', '차이', '우위']
+            for pattern in comparison_patterns:
+                if pattern in content:
+                    base_score += 1
+        
+        # 일정 섹션: 날짜/연도가 많으면 점수 증가
+        elif section_id == 'timeline':
+            year_pattern = re.findall(r'20\d{2}년', content)
+            if len(year_pattern) > 3:
+                base_score += 2
+        
+        # 정책 섹션: 정부/부처 언급 시 점수 증가
+        elif section_id == 'policy':
+            gov_keywords = ['정부', '부처', '장관', '국회', '법안']
+            for keyword in gov_keywords:
+                if keyword in content:
+                    base_score += 1
+        
+        return base_score
+    
+    def recommend_sections(self, article: Dict, num_sections: int = 3) -> List[Tuple[str, int]]:
+        """
+        기사에 가장 적합한 섹션들을 추천
+        
+        Args:
+            article: 기사 정보
+            num_sections: 추천할 섹션 수 (기본값: 3)
+            
+        Returns:
+            추천 섹션 리스트 [(섹션ID, 점수), ...]
+        """
+        # 섹션별 점수 계산
+        scores = self.analyze_article(article)
+        
+        # 점수가 0보다 큰 섹션만 필터링
+        valid_sections = [(sid, score) for sid, score in scores.items() if score > 0]
+        
+        # 점수 기준으로 정렬
+        sorted_sections = sorted(valid_sections, key=lambda x: x[1], reverse=True)
+        
+        # 상위 N개 선택
+        recommended = sorted_sections[:num_sections]
+        
+        # 추천된 섹션이 부족한 경우 기본 섹션 추가
+        if len(recommended) < num_sections:
+            default_sections = ['technical', 'benefits', 'statistics']
+            for default in default_sections:
+                if default not in [s[0] for s in recommended]:
+                    recommended.append((default, 0))
+                    if len(recommended) >= num_sections:
+                        break
+        
+        # 로깅
+        self.logger.info(f"기사 '{article.get('title', 'Unknown')}'에 대한 섹션 추천:")
+        for section_id, score in recommended:
+            section_info = self.config.get_section_info(section_id)
+            self.logger.info(f"  - {section_info['title']} (점수: {score})")
+        
+        return recommended
+    
+    def generate_dynamic_prompt(self, article: Dict, selected_sections: List[Tuple[str, int]]) -> str:
+        """
+        선택된 섹션에 맞는 동적 프롬프트 생성
+        
+        Args:
+            article: 기사 정보
+            selected_sections: 선택된 섹션 리스트
+            
+        Returns:
+            생성된 프롬프트
+        """
+        prompt_parts = []
+        
+        # 기본 구조 설명
+        prompt_parts.append("다음 구조로 카드뉴스를 작성해주세요:")
+        prompt_parts.append("\n1. 타이틀/서론 (필수)")
+        
+        # 선택된 섹션들
+        for idx, (section_id, _) in enumerate(selected_sections, start=2):
+            section_info = self.config.get_section_info(section_id)
+            prompt_parts.append(f"{idx}. {section_info['title']}: {section_info['description']}")
+            prompt_parts.append(f"   - 최소 {section_info['min_items']}개, 최대 {section_info['max_items']}개 항목")
+        
+        # 마지막 섹션 (필수)
+        prompt_parts.append(f"{len(selected_sections) + 2}. 전문가 의견/시사점 (필수)")
+        
+        # 스타일 가이드 추가
+        prompt_parts.append("\n각 섹션은 다음 스타일을 적용해주세요:")
+        for section_id, _ in selected_sections:
+            section_info = self.config.get_section_info(section_id)
+            style_info = self.config.get_section_style(section_id)
+            prompt_parts.append(f"- {section_info['title']}: {style_info['icon']} 아이콘, {style_info['color']} 색상 테마")
+        
+        return "\n".join(prompt_parts)
+    
+    def save_selection_analytics(self, article_id: str, selected_sections: List[Tuple[str, int]]):
+        """
+        섹션 선택 데이터를 분석용으로 저장
+        
+        Args:
+            article_id: 기사 ID
+            selected_sections: 선택된 섹션 리스트
+        """
+        analytics_file = 'section_analytics.json'
+        
+        # 기존 데이터 로드
+        try:
+            with open(analytics_file, 'r', encoding='utf-8') as f:
+                analytics_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            analytics_data = {'selections': [], 'section_counts': {}}
+        
+        # 새 데이터 추가
+        selection_record = {
+            'article_id': article_id,
+            'timestamp': datetime.now().isoformat(),
+            'sections': [s[0] for s in selected_sections],
+            'scores': {s[0]: s[1] for s in selected_sections}
+        }
+        analytics_data['selections'].append(selection_record)
+        
+        # 섹션별 사용 횟수 업데이트
+        for section_id, _ in selected_sections:
+            analytics_data['section_counts'][section_id] = analytics_data['section_counts'].get(section_id, 0) + 1
+        
+        # 저장
+        with open(analytics_file, 'w', encoding='utf-8') as f:
+            json.dump(analytics_data, f, ensure_ascii=False, indent=2)
+
+
+def test_selector():
+    """테스트 함수"""
+    selector = SectionSelector()
+    
+    # 테스트 기사
+    test_article = {
+        'title': '한국, 2030년까지 재생에너지 비중 30% 목표... 해상풍력 중심 추진',
+        'content': '정부가 2030년까지 재생에너지 발전 비중을 30%까지 확대하는 계획을 발표했다. 특히 해상풍력을 중심으로 12GW 규모의 대규모 프로젝트를 추진한다. 이는 기존 목표 대비 20% 상향된 것으로, 총 투자 규모는 50조원에 달할 전망이다.',
+        'keywords': ['재생에너지', '해상풍력', '정책', '2030']
+    }
+    
+    # 섹션 추천
+    recommendations = selector.recommend_sections(test_article)
+    print(f"\n추천 섹션:")
+    for section_id, score in recommendations:
+        section_info = self.config.get_section_info(section_id)
+        print(f"- {section_info['title']} (점수: {score})")
+    
+    # 프롬프트 생성
+    prompt = selector.generate_dynamic_prompt(test_article, recommendations)
+    print(f"\n생성된 프롬프트:\n{prompt}")
+
+
+if __name__ == "__main__":
+    test_selector()

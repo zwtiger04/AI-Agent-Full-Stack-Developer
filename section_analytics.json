@@ -1,0 +1,116 @@
+{
+  "selections": [
+    {
+      "article_id": "test_001",
+      "timestamp": "2025-06-12T16:49:29.845375",
+      "sections": [
+        "technical",
+        "statistics",
+        "timeline"
+      ],
+      "scores": {
+        "technical": 9,
+        "statistics": 7,
+        "timeline": 8
+      },
+      "article_keywords": [
+        "재생에너지",
+        "태양광",
+        "2030"
+      ]
+    },
+    {
+      "article_id": "test_002",
+      "timestamp": "2025-06-12T16:49:29.846159",
+      "sections": [
+        "background",
+        "policy",
+        "challenges"
+      ],
+      "scores": {
+        "background": 8,
+        "policy": 6,
+        "challenges": 7
+      },
+      "article_keywords": [
+        "정책",
+        "규제",
+        "전력망"
+      ]
+    },
+    {
+      "article_id": "test_003",
+      "timestamp": "2025-06-12T16:49:29.846769",
+      "sections": [
+        "comparison",
+        "benefits",
+        "process"
+      ],
+      "scores": {
+        "comparison": 9,
+        "benefits": 8,
+        "process": 5
+      },
+      "article_keywords": [
+        "VPP",
+        "ESS",
+        "효율성"
+      ]
+    },
+    {
+      "article_id": "test_004",
+      "timestamp": "2025-06-12T16:49:29.847233",
+      "sections": [
+        "technical",
+        "statistics",
+        "policy"
+      ],
+      "scores": {
+        "technical": 10,
+        "statistics": 8,
+        "policy": 9
+      },
+      "article_keywords": [
+        "재생에너지",
+        "VPP",
+        "정책"
+      ]
+    },
+    {
+      "article_id": "test_005",
+      "timestamp": "2025-06-12T16:49:29.847701",
+      "sections": [
+        "timeline",
+        "stakeholders",
+        "challenges"
+      ],
+      "scores": {
+        "timeline": 7,
+        "stakeholders": 6,
+        "challenges": 8
+      },
+      "article_keywords": [
+        "2030",
+        "한전",
+        "도전과제"
+      ]
+    }
+  ],
+  "section_counts": {
+    "technical": 2,
+    "statistics": 2,
+    "timeline": 2,
+    "background": 1,
+    "policy": 2,
+    "challenges": 2,
+    "comparison": 1,
+    "benefits": 1,
+    "process": 1,
+    "stakeholders": 1
+  },
+  "metadata": {
+    "created_at": "2025-06-12T16:49:29.845115",
+    "last_updated": "2025-06-12T16:49:29.847869",
+    "version": "1.0"
+  }
+}

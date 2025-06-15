@@ -152,11 +152,11 @@ class ElectimesCrawler(BaseCrawler):
             print(f"Error saving crawled URL: {str(e)}")
 
     def is_recent_article(self, date: datetime) -> bool:
-        """기사가 한국 시간 기준으로 최근 3일 내의 것인지 확인 (날짜만 비교)"""
+        """기사가 한국 시간 기준으로 최근 7일 내의 것인지 확인 (날짜만 비교)"""
         kst = pytz.timezone('Asia/Seoul')
         now_kst = datetime.now(kst) # 한국 시간 현재 시각
         today_kst = now_kst.date() # 한국 시간 오늘 날짜
-        three_days_ago_kst = today_kst - timedelta(days=3) # 한국 시간 3일 전 날짜
+        three_days_ago_kst = today_kst - timedelta(days=7) # 한국 시간 3일 전 날짜
 
         # 기사 날짜의 시간 정보 제거 (naive datetime 가정)
         article_date = date.date()
@@ -497,7 +497,7 @@ class ElectimesCrawler(BaseCrawler):
     def crawl(self) -> list:
         """
         전기신문 기사를 크롤링합니다.
-        한국 날짜 기준으로 최근 3일 이내 기사가 나타날 때까지 페이지를 탐색하며,
+        한국 날짜 기준으로 최근 7일 이내 기사가 나타날 때까지 페이지를 탐색하며,
         키워드 및 AI 추천 필터링을 거쳐 상세 내용을 크롤링합니다.
         """
         print("[Electimes] 크롤링 시작...")
@@ -529,10 +529,10 @@ class ElectimesCrawler(BaseCrawler):
 
             if recent_article_found_on_page:
                  consecutive_pages_without_recent = 0 # 최근 기사를 찾았으므로 카운트 리셋
-                 print(f"[Electimes] 페이지 {page}에서 최근 3일 이내 기사 발견. 탐색 계속.")
+                 print(f"[Electimes] 페이지 {page}에서 최근 7일 이내 기사 발견. 탐색 계속.")
             else:
                  consecutive_pages_without_recent += 1
-                 print(f"[Electimes] 페이지 {page}에서 최근 3일 이내 기사 없음. 연속 {consecutive_pages_without_recent} 페이지.")
+                 print(f"[Electimes] 페이지 {page}에서 최근 7일 이내 기사 없음. 연속 {consecutive_pages_without_recent} 페이지.")
                  if consecutive_pages_without_recent >= max_consecutive_without_recent:
                      print(f"[Electimes] 최근 기사 없는 페이지가 {max_consecutive_without_recent}번 연속되어 탐색 종료.")
                      break # 연속 3페이지 동안 최근 기사가 없으면 탐색 종료

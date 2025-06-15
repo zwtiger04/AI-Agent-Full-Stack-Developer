@@ -55,3 +55,33 @@ debug_*.txt
 feedback/*.csv
 feedback/*.joblib
 .env.production
+
+# Backup files
+*.backup*
+*backup_*
+backups/
+
+# Test and temporary files
+test_*.png
+test_*.py
+*_test.py
+*_temp.py
+
+# Output directories
+card_news_output/
+enhanced_card_news_output/
+improved_card_news_output/
+premium_card_news_output/
+structured_cards_output/
+test_comparison/
+detailed/
+html_card_news/
+
+# Temporary HTML files
+debug_*.html*
+
+# PID files
+*.pid
+
+# JSON backup files
+*.json.backup
