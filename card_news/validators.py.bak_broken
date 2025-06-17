@@ -1,0 +1,156 @@
+"""
+카드뉴스 시스템 데이터 검증 모듈
+작성일: 2025-06-15
+목적: 모든 입력 데이터의 타입 검증 및 정규화
+"""
+
+from typing import Any, List, Dict, Union, Optional
+import logging
+from .types import (
+    Section, Article, ThemeData, ThemeName, ColorTheme,
+    SectionId, SectionList, MixedSectionData
+)
+
+logger = logging.getLogger(__name__)
+
+class DataValidator:
+    """데이터 검증 및 정규화 클래스"""
+    
+    @staticmethod
+    def ensure_string(value: Any, default: str = '') -> str:
+        """어떤 값이든 안전하게 문자열로 변환"""
+        if value is None:
+            return default
+        elif isinstance(value, str):
+            return value
+        elif isinstance(value, (list, tuple)) and value:
+            # 리스트의 첫 번째 요소를 재귀적으로 문자열로 변환
+            return DataValidator.ensure_string(value[0], default)
+        elif isinstance(value, dict):
+            # 딕셔너리의 경우 id나 name 필드를 찾음
+            for key in ['id', 'name', 'value']:
+                if key in value:
+                    return DataValidator.ensure_string(value[key], default)
+            return default
+        else:
+            try:
+                return str(value)
+            except:
+                logger.warning(f"Cannot convert {type(value).__name__} to string: {value}")
+                return default
+    
+    @staticmethod
+    def normalize_sections(data: Any) -> List[Section]:
+        """어떤 형태의 섹션 데이터도 정규화"""
+        if not data:
+            return []
+        
+        # 단일 값을 리스트로 변환
+        if not isinstance(data, (list, tuple)):
+            data = [data]
+        
+        sections = []
+        for item in data:
+            try:
+                section = Section.from_any(item)
+                sections.append(section)
+            except ValueError as e:
+                logger.warning(f"Failed to convert to Section: {e}")
+                # 실패한 경우 문자열로 변환 시도
+                try:
+                    section_id = DataValidator.ensure_string(item)
+                    if section_id:
+                        sections.append(Section(id=section_id))
+                except:
+                    continue
+        
+        return sections
+    
+    @staticmethod
+    def normalize_theme(theme: Any) -> ThemeData:
+        """테마 데이터 정규화"""
+        if isinstance(theme, str):
+            return theme
+        elif isinstance(theme, dict) and 'primary' in theme:
+            return theme
+        elif isinstance(theme, list) and theme:
+            # 리스트의 첫 번째 요소 사용
+            return DataValidator.normalize_theme(theme[0])
+        else:
+            # 기본값 반환
+            logger.warning(f"Invalid theme data: {type(theme).__name__}, using default")
+            return 'modern'
+    
+    @staticmethod
+    def validate_article(data: Dict[str, Any]) -> Article:
+        """기사 데이터 검증 및 Article 객체 생성"""
+        required_fields = ['title']
+        
+        # 필수 필드 확인
+        for field in required_fields:
+            if field not in data:
+                # id 필드 특별 처리
+                elif field == 'id' and 'page_id' in data:
+                    data['id'] = data['page_id']
+                # title 필드 한글 처리
+                if field == 'title' and '제목' in data:
+                    data['title'] = data['제목']
+                else:
+                    raise ValueError(f"Required field '{field}' is missing")
+        
+        return Article.from_dict(data)
+    
+    @staticmethod
+    def sanitize_dict_key(key: Any) -> str:
+        """딕셔너리 키로 사용 가능한 문자열로 변환"""
+        return DataValidator.ensure_string(key, default='unknown')
+    
+    @staticmethod
+    def validate_section_list(sections: Any) -> List[str]:
+        """섹션 리스트를 문자열 리스트로 검증 및 변환"""
+        normalized = DataValidator.normalize_sections(sections)
+        return [section.id for section in normalized]
+
+class TypeGuard:
+    """타입 가드 함수들"""
+    
+    @staticmethod
+    def is_section_list(value: Any) -> bool:
+        """섹션 리스트인지 확인"""
+        if not isinstance(value, (list, tuple)):
+            return False
+        return all(
+            isinstance(item, (str, tuple, dict)) or 
+            isinstance(item, Section) 
+            for item in value
+        )
+    
+    @staticmethod
+    def is_theme_data(value: Any) -> bool:
+        """유효한 테마 데이터인지 확인"""
+        if isinstance(value, str):
+            return True
+        elif isinstance(value, dict):
+            return 'primary' in value
+        return False
+    
+    @staticmethod
+    def is_valid_article_dict(value: Any) -> bool:
+        """유효한 기사 딕셔너리인지 확인"""
+        if not isinstance(value, dict):
+            return False
+        # title 또는 제목 필드가 있어야 함
+        return 'title' in value or '제목' in value
+
+# 전역 검증 함수들 (편의성)
+def ensure_string(value: Any, default: str = '') -> str:
+    """전역 문자열 변환 함수"""
+    return DataValidator.ensure_string(value, default)
+
+def normalize_sections(data: Any) -> List[Section]:
+    """전역 섹션 정규화 함수"""
+    return DataValidator.normalize_sections(data)
+
+def sanitize_key(key: Any) -> str:
+    """전역 딕셔너리 키 정제 함수"""
+    return DataValidator.sanitize_dict_key(key)

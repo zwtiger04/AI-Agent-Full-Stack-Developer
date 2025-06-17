@@ -33,7 +33,7 @@ class InterestMonitor:
         """초기화"""
         self.notion = NotionClient()
         self.processed_file = 'processed_articles.json'
-        self.pending_file = 'pending_cardnews.json'
+        self.pending_file = '/home/zwtiger/AI-Agent-Full-Stack-Developer/data/card_news/json/pending_cardnews.json'
         self.processed_articles = self.load_processed()
         
         # 로그 디렉토리 생성

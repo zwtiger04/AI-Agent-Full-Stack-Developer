@@ -1,20 +1,22 @@
 """
-카드뉴스 분석 대시보드 통합 모듈
-작성일: 2025-06-13
-목적: section_analytics.py의 기능을 Streamlit UI에 통합
+분석 대시보드 통합 모듈 (Plotly 선택적 지원)
 """
-
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import json
-
 from card_news.section_analytics import SectionAnalytics
 from card_news.section_config import SectionConfig
 
+# Plotly 선택적 import
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+    # st.warning은 함수 내에서만 호출되어야 함
 
 class AnalyticsDashboard:
     """Streamlit UI용 분석 대시보드"""
@@ -24,430 +26,336 @@ class AnalyticsDashboard:
         self.config = SectionConfig()
     
     def render_mini_dashboard(self, article_keywords: List[str]) -> Dict[str, float]:
-        """
-        카드뉴스 생성 화면에 표시할 미니 대시보드
-        Returns: 섹션별 신뢰도 점수
-        """
-        # 섹션 신뢰도 계산
-        section_reliability = self.analytics.get_section_reliability()
-        
-        # 키워드 기반 추천
-        keyword_recommendations = {}
-        for keyword in article_keywords:
-            best_sections = self.analytics.get_best_sections_for_keyword(keyword, top_n=3)
-            for section, score in best_sections:
-                if section not in keyword_recommendations:
-                    keyword_recommendations[section] = []
-                keyword_recommendations[section].append((keyword, score))
-        
-        # 미니 대시보드 렌더링
-        with st.container():
-            st.markdown("### 📊 섹션 분석 인사이트")
-            col1, col2 = st.columns(2)
+        """미니 대시보드 렌더링 (신뢰도 점수 반환)"""
+        if not PLOTLY_AVAILABLE:
+            # Plotly 없이도 기본 신뢰도 점수는 반환
+            return self.analytics.get_section_reliability()
             
-            with col1:
-                st.markdown("**🎯 섹션 신뢰도**")
-                reliability_df = pd.DataFrame([
-                    {"섹션": self.config.SECTIONS[section].get('title', section), 
-                     "신뢰도": f"{score:.1%}"}
-                    for section, score in sorted(
-                        section_reliability.items(), 
-                        key=lambda x: x[1], 
-                        reverse=True
-                    )[:5]
-                ])
-                st.dataframe(reliability_df, hide_index=True, use_container_width=True)
-            
-            with col2:
-                st.markdown("**🔍 키워드 기반 추천**")
-                for section, keywords in list(keyword_recommendations.items())[:3]:
-                    section_name = self.config.SECTIONS.get(section, {}).get('title', section)
-                    keywords_str = ", ".join([f"{kw}" for kw, _ in keywords[:2]])
-                    st.info(f"**{section_name}**: {keywords_str}")
+        col1, col2 = st.columns(2)
         
-        return section_reliability
-    
-    def render_quality_feedback(self, article_id: str, selected_sections: List[str]):
-        """품질 피드백 UI"""
-        st.markdown("### 📝 카드뉴스 품질 평가")
-        
-        feedback_data = {}
-        
-        # 전체 만족도
-        overall_rating = st.slider(
-            "전체 만족도",
-            min_value=1,
-            max_value=10,
-            value=7,
-            help="생성된 카드뉴스의 전체적인 품질을 평가해주세요"
-        )
-        feedback_data['overall_rating'] = overall_rating
-        
-        # 섹션별 평가
-        st.markdown("**섹션별 적합도 평가**")
-        section_ratings = {}
-        
-        cols = st.columns(min(len(selected_sections), 3))
-        for idx, section in enumerate(selected_sections):
-            with cols[idx % 3]:
-                section_name = self.config.SECTIONS.get(section, {}).get('title', section)
-                rating = st.select_slider(
-                    section_name,
-                    options=['낮음', '보통', '높음'],
-                    value='보통',
-                    key=f"section_rating_{section}"
-                )
-                section_ratings[section] = {'낮음': 3, '보통': 7, '높음': 10}[rating]
-        
-        feedback_data['section_ratings'] = section_ratings
-        
-        # 피드백 저장
-        if st.button("💾 평가 저장", type="primary"):
-            self.analytics.save_quality_feedback(
-                article_id=article_id,
-                overall_rating=overall_rating,
-                section_ratings=section_ratings,
-                timestamp=datetime.now().isoformat()
-            )
-            st.success("✅ 평가가 저장되었습니다!")
-            
-            # 분석 리포트 업데이트
-            self.analytics.generate_weekly_report()
-    
-    def get_optimized_sections(self, article_keywords: List[str], 
-                             original_sections: List[str]) -> Tuple[List[str], Dict[str, str]]:
-        """
-        분석 결과를 바탕으로 최적화된 섹션 제안
-        Returns: (optimized_sections, reasons)
-        """
-        reliability = self.analytics.get_section_reliability()
-        optimized = []
-        reasons = {}
-        
-        # 1. 고성능 섹션 우선 포함
-        for section in original_sections:
-            if reliability.get(section, 0) >= 0.7:  # 신뢰도 70% 이상
-                optimized.append(section)
-            else:
-                # 2. 저성능 섹션은 대체 섹션 찾기
-                alternative = self._find_alternative_section(section, article_keywords)
-                if alternative:
-                    optimized.append(alternative)
-                    reasons[alternative] = f"{section} 대신 추천 (신뢰도: {reliability.get(alternative, 0):.1%})"
-        
-        # 3. 키워드 기반 추가 섹션 제안
-        for keyword in article_keywords[:3]:  # 상위 3개 키워드만
-            best_sections = self.analytics.get_best_sections_for_keyword(keyword, top_n=2)
-            for section, score in best_sections:
-                if section not in optimized and len(optimized) < 5:
-                    optimized.append(section)
-                    reasons[section] = f"키워드 '{keyword}' 매칭 (점수: {score:.1f})"
-        
-        return optimized[:5], reasons  # 최대 5개 섹션
-    
-    def _find_alternative_section(self, original_section: str, 
-                                keywords: List[str]) -> Optional[str]:
-        """대체 섹션 찾기"""
-        # 유사한 목적의 섹션 매핑
-        alternatives = {
-            'technical': ['statistics', 'process'],
-            'background': ['overview', 'introduction'],
-            'challenges': ['solutions', 'future'],
-            'benefits': ['impact', 'significance']
-        }
-        
-        # 먼저 직접 매핑된 대체 섹션 확인
-        if original_section in alternatives:
-            for alt in alternatives[original_section]:
-                reliability = self.analytics.get_section_reliability()
-                if reliability.get(alt, 0) >= 0.7:
-                    return alt
-        
-        # 키워드 기반 대체 섹션 찾기
-        for keyword in keywords[:2]:
-            best_sections = self.analytics.get_best_sections_for_keyword(keyword, top_n=3)
-            for section, _ in best_sections:
-                if section != original_section:
-                    return section
-        
-        return None
-
-    def render_full_dashboard(self):
-        """전체 분석 대시보드 (별도 탭에서 표시)"""
-        st.header("📊 카드뉴스 섹션 분석 대시보드")
-        
-        # 분석 기간 선택
-        col1, col2 = st.columns([2, 1])
         with col1:
-            date_range = st.date_input(
-                "분석 기간",
-                value=(datetime.now() - timedelta(days=7), datetime.now()),
-                format="YYYY-MM-DD"
-            )
+            # 섹션별 성과 차트
+            section_scores = self.analytics.get_section_performance()
+            if section_scores:
+                df = pd.DataFrame(
+                    list(section_scores.items()),
+                    columns=['섹션', '성과지수']
+                ).sort_values('성과지수', ascending=True)
+                
+                fig = px.bar(df, x='성과지수', y='섹션', orientation='h',
+                            title='섹션별 성과 지수')
+                st.plotly_chart(fig, use_container_width=True)
         
         with col2:
-            if st.button("🔄 데이터 새로고침"):
-                st.rerun()
+            # 키워드 관련성
+            if article_keywords:
+                keyword_relevance = {}
+                for keyword in article_keywords[:5]:  # 상위 5개만
+                    relevance = self.analytics.get_keyword_relevance(keyword)
+                    keyword_relevance[keyword] = relevance
+                
+                if keyword_relevance:
+                    df_keywords = pd.DataFrame(
+                        list(keyword_relevance.items()),
+                        columns=['키워드', '관련성']
+                    )
+                    
+                    fig = px.pie(df_keywords, values='관련성', names='키워드',
+                                title='키워드 관련성')
+                    st.plotly_chart(fig, use_container_width=True)
         
-        # 주요 지표
-        st.markdown("### 📈 주요 지표")
-        metrics_cols = st.columns(4)
+        # 신뢰도 점수 반환
+        return self.analytics.get_section_reliability()
+    
+    def render_full_dashboard(self):
+        """전체 분석 대시보드 렌더링"""
+        st.header("📊 카드뉴스 생성 분석")
         
-        data = self.analytics.load_data()
-        total_cards = len(data.get('selections', []))
-        avg_sections = sum(len(s['sections']) for s in data.get('selections', [])) / max(total_cards, 1)
-        top_section = max(data.get('section_counts', {}).items(), key=lambda x: x[1])[0] if data.get('section_counts') else 'N/A'
+        if not PLOTLY_AVAILABLE:
+            st.warning("📊 차트를 표시하려면 plotly를 설치하세요: `pip install plotly`")
+            # 기본 통계만 표시
+            stats = self.analytics.get_basic_stats()
+            if stats:
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("총 생성 수", stats.get('total_generated', 0))
+                with col2:
+                    st.metric("평균 섹션 수", f"{stats.get('avg_sections', 0):.1f}")
+                with col3:
+                    st.metric("선호 테마", stats.get('favorite_theme', 'N/A'))
+            return
         
-        with metrics_cols[0]:
-            st.metric("총 카드뉴스", f"{total_cards}개")
+        # Plotly가 있을 때의 전체 대시보드
+        tabs = st.tabs(["개요", "섹션 분석", "시간대 분석", "품질 피드백"])
         
-        with metrics_cols[1]:
-            st.metric("평균 섹션 수", f"{avg_sections:.1f}개")
+        with tabs[0]:
+            self._render_overview()
         
-        with metrics_cols[2]:
-            st.metric("최다 사용 섹션", self.config.SECTIONS.get(top_section, {}).get('title', top_section))
+        with tabs[1]:
+            self._render_section_analysis()
         
-        with metrics_cols[3]:
-            quality_score = self._calculate_average_quality_score()
-            st.metric("평균 품질 점수", f"{quality_score:.1f}/10")
+        with tabs[2]:
+            self._render_time_analysis()
         
-        # 섹션별 사용 추이
-        st.markdown("### 📊 섹션별 사용 추이")
-        usage_data = self._prepare_usage_trend_data(data)
-        if not usage_data.empty:
-            fig = px.line(
-                usage_data,
-                x='date',
-                y='count',
-                color='section',
-                title='일별 섹션 사용 현황',
-                labels={'count': '사용 횟수', 'date': '날짜', 'section': '섹션'}
-            )
+        with tabs[3]:
+            self._render_quality_feedback()
+    
+    def _render_overview(self):
+        """개요 탭 렌더링"""
+        if not PLOTLY_AVAILABLE:
+            return
+            
+        stats = self.analytics.get_basic_stats()
+        
+        if not stats:
+            st.info("아직 데이터가 없습니다.")
+            return
+        
+        # 기본 메트릭
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("총 생성 수", stats['total_generated'])
+        
+        with col2:
+            st.metric("오늘 생성", stats['today_generated'])
+        
+        with col3:
+            st.metric("평균 섹션 수", f"{stats['avg_sections']:.1f}")
+        
+        with col4:
+            st.metric("선호 테마", stats['favorite_theme'])
+        
+        # 일별 생성 추이
+        daily_stats = self.analytics.get_daily_stats()
+        if daily_stats:
+            df_daily = pd.DataFrame(daily_stats)
+            fig = px.line(df_daily, x='date', y='count', 
+                         title='일별 카드뉴스 생성 추이',
+                         markers=True)
+            st.plotly_chart(fig, use_container_width=True)
+    
+    def _render_section_analysis(self):
+        """섹션 분석 탭 렌더링"""
+        if not PLOTLY_AVAILABLE:
+            return
+            
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # 섹션 사용 빈도
+            section_usage = self.analytics.get_section_usage()
+            if section_usage:
+                df = pd.DataFrame(
+                    list(section_usage.items()),
+                    columns=['섹션', '사용 횟수']
+                ).sort_values('사용 횟수', ascending=False)
+                
+                fig = px.bar(df, x='섹션', y='사용 횟수',
+                            title='섹션별 사용 빈도')
+                st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # 섹션 조합 분석
+            combinations = self.analytics.get_section_combinations()
+            if combinations:
+                top_combos = sorted(combinations.items(), 
+                                  key=lambda x: x[1], 
+                                  reverse=True)[:10]
+                
+                combo_names = [' + '.join(combo[0]) for combo in top_combos]
+                combo_counts = [combo[1] for combo in top_combos]
+                
+                fig = px.pie(values=combo_counts, names=combo_names,
+                            title='인기 섹션 조합 TOP 10')
+                st.plotly_chart(fig, use_container_width=True)
+    
+    def _render_time_analysis(self):
+        """시간대 분석 탭 렌더링"""
+        if not PLOTLY_AVAILABLE:
+            return
+            
+        # 시간대별 생성 패턴
+        hourly_stats = self.analytics.get_hourly_stats()
+        if hourly_stats:
+            df_hourly = pd.DataFrame(hourly_stats)
+            fig = px.bar(df_hourly, x='hour', y='count',
+                        title='시간대별 생성 패턴')
             st.plotly_chart(fig, use_container_width=True)
         
-        # 키워드-섹션 상관관계
-        st.markdown("### 🔗 키워드-섹션 상관관계")
-        correlation_matrix = self.analytics.get_keyword_section_correlation()
-        if correlation_matrix:
-            self._render_correlation_heatmap(correlation_matrix)
+        # 요일별 패턴
+        weekly_stats = self.analytics.get_weekly_stats()
+        if weekly_stats:
+            df_weekly = pd.DataFrame(weekly_stats)
+            fig = px.bar(df_weekly, x='weekday', y='count',
+                        title='요일별 생성 패턴')
+            st.plotly_chart(fig, use_container_width=True)
+    
+    def _render_quality_feedback(self):
+        """품질 피드백 탭 렌더링"""
+        if not PLOTLY_AVAILABLE:
+            st.info("품질 평가 데이터를 표시하려면 plotly가 필요합니다.")
+            return
+            
+        feedback_data = self.analytics.get_quality_feedback_summary()
         
-        # 섹션 성능 분석
-        st.markdown("### 🎯 섹션 성능 분석")
-        performance_data = self._analyze_section_performance()
-        if performance_data:
-            fig = go.Figure(data=[
-                go.Bar(
-                    x=list(performance_data.keys()),
-                    y=list(performance_data.values()),
-                    marker_color='lightblue'
+        if not feedback_data:
+            st.info("아직 품질 평가 데이터가 없습니다.")
+            return
+        
+        # 전체 만족도
+        avg_rating = feedback_data.get('average_rating', 0)
+        st.metric("평균 만족도", f"{avg_rating:.1f} / 10")
+        
+        # 섹션별 평가
+        section_ratings = feedback_data.get('section_ratings', {})
+        if section_ratings:
+            df_ratings = pd.DataFrame(
+                list(section_ratings.items()),
+                columns=['섹션', '평균 평점']
+            ).sort_values('평균 평점', ascending=False)
+            
+            fig = px.bar(df_ratings, x='섹션', y='평균 평점',
+                        title='섹션별 평균 평점',
+                        color='평균 평점',
+                        color_continuous_scale='RdYlGn')
+            st.plotly_chart(fig, use_container_width=True)
+    
+    def get_optimized_sections(self, 
+                              article_keywords: List[str], 
+                              selected_sections: List[str],
+                              num_sections: int = 5) -> Tuple[List[str], str]:
+        """AI 기반 섹션 최적화"""
+        try:
+            # 키워드 기반 추천
+            keyword_sections = set()
+            for keyword in article_keywords:
+                related = self.analytics.get_keyword_related_sections(keyword)
+                keyword_sections.update(related[:2])  # 키워드당 상위 2개
+            
+            # 성과 기반 추천
+            performance = self.analytics.get_section_performance()
+            top_performers = sorted(performance.items(), 
+                                  key=lambda x: x[1], 
+                                  reverse=True)
+            
+            # 신뢰도 기반 필터링
+            reliability = self.analytics.get_section_reliability()
+            
+            # 최종 선택
+            optimized = []
+            reasons = []
+            
+            # 1. 사용자 선택 중 신뢰도 높은 것
+            for section in selected_sections:
+                if reliability.get(section, 0) > 0.7:
+                    optimized.append(section)
+                    reasons.append(f"{section}: 사용자 선택 + 높은 신뢰도")
+            
+            # 2. 키워드 관련 섹션
+            for section in keyword_sections:
+                if section not in optimized and len(optimized) < num_sections:
+                    optimized.append(section)
+                    reasons.append(f"{section}: 키워드 관련성")
+            
+            # 3. 고성과 섹션
+            for section, score in top_performers:
+                if section not in optimized and len(optimized) < num_sections:
+                    optimized.append(section)
+                    reasons.append(f"{section}: 높은 성과 지수")
+            
+            # 4. 필수 섹션 확인
+            if 'intro' not in optimized:
+                optimized.insert(0, 'intro')
+                reasons.insert(0, "intro: 필수 섹션")
+            
+            if 'conclusion' not in optimized and len(optimized) < num_sections:
+                optimized.append('conclusion')
+                reasons.append("conclusion: 필수 섹션")
+            
+            # 이유 설명 생성
+            reason_text = "AI 최적화 이유:\\n" + "\\n".join(reasons[:5])
+            
+            return optimized[:num_sections], reason_text
+            
+        except Exception as e:
+            # 오류 시 기본값 반환
+            st.error(f"최적화 중 오류: {e}")
+            return selected_sections[:num_sections], "최적화 실패 - 사용자 선택 유지"
+    
+    def render_quality_feedback(self, article_id: str):
+        """품질 피드백 UI 렌더링"""
+        st.subheader("📝 품질 평가")
+        
+        with st.form(f"feedback_{article_id}"):
+            # 전체 만족도
+            overall = st.slider("전체 만족도", 1, 10, 7)
+            
+            # 섹션별 평가
+            st.write("섹션별 평가:")
+            section_ratings = {}
+            
+            cols = st.columns(3)
+            sections = list(self.config.ALL_SECTIONS.keys())
+            
+            for i, section in enumerate(sections):
+                with cols[i % 3]:
+                    rating = st.slider(
+                        self.config.ALL_SECTIONS[section]['name'],
+                        1, 10, 5,
+                        key=f"rating_{article_id}_{section}"
+                    )
+                    section_ratings[section] = rating
+            
+            # 피드백 저장
+            if st.form_submit_button("평가 저장"):
+                self.analytics.save_quality_feedback(
+                    article_id,
+                    overall,
+                    section_ratings
                 )
-            ])
-            fig.update_layout(
-                title='섹션별 평균 품질 점수',
-                xaxis_title='섹션',
-                yaxis_title='평균 점수'
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        
-        # 개선 제안
-        st.markdown("### 💡 개선 제안")
-        suggestions = self._generate_improvement_suggestions()
-        for suggestion in suggestions:
-            st.info(suggestion)
-    
-    def _calculate_average_quality_score(self) -> float:
-        """평균 품질 점수 계산"""
-        data = self.analytics.load_data()
-        feedback = data.get('quality_feedback', [])
-        if not feedback:
-            return 7.0  # 기본값
-        
-        total_score = sum(f.get('overall_rating', 7) for f in feedback)
-        return total_score / len(feedback)
-    
-    def _prepare_usage_trend_data(self, data: Dict) -> pd.DataFrame:
-        """사용 추이 데이터 준비"""
-        selections = data.get('selections', [])
-        if not selections:
-            return pd.DataFrame()
-        
-        trend_data = []
-        for selection in selections:
-            date = datetime.fromisoformat(selection['timestamp']).date()
-            for section in selection['sections']:
-                trend_data.append({
-                    'date': date,
-                    'section': self.config.SECTIONS.get(section, {}).get('title', section),
-                    'count': 1
-                })
-        
-        df = pd.DataFrame(trend_data)
-        if df.empty:
-            return df
-        return df.groupby(['date', 'section']).sum().reset_index()
-    
-    def _render_correlation_heatmap(self, correlation_matrix: Dict):
-        """키워드-섹션 상관관계 히트맵"""
-        # 데이터 준비
-        keywords = list(correlation_matrix.keys())
-        sections = list(set(s[0] for kw_data in correlation_matrix.values() for s in kw_data))
-        
-        z_data = []
-        for keyword in keywords:
-            row = []
-            for section in sections:
-                # 해당 키워드의 섹션 찾기
-                value = 0
-                kw_sections = correlation_matrix.get(keyword, [])
-                for s, score in kw_sections:
-                    if s == section:
-                        value = score
-                        break
-                row.append(value)
-            z_data.append(row)
-        
-        # 히트맵 생성
-        fig = go.Figure(data=go.Heatmap(
-            z=z_data,
-            x=[self.config.SECTIONS.get(s, {}).get('title', s) for s in sections],
-            y=keywords,
-            colorscale='Blues'
-        ))
-        
-        fig.update_layout(
-            title='키워드-섹션 상관관계',
-            xaxis_title='섹션',
-            yaxis_title='키워드'
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-    
-    def _analyze_section_performance(self) -> Dict[str, float]:
-        """섹션별 성능 분석"""
-        data = self.analytics.load_data()
-        feedback = data.get('quality_feedback', [])
-        
-        section_scores = {}
-        section_counts = {}
-        
-        for fb in feedback:
-            for section, rating in fb.get('section_ratings', {}).items():
-                if section not in section_scores:
-                    section_scores[section] = 0
-                    section_counts[section] = 0
-                section_scores[section] += rating
-                section_counts[section] += 1
-        
-        # 평균 계산
-        performance = {}
-        for section in section_scores:
-            performance[self.config.SECTIONS.get(section, {}).get('title', section)] = \
-                section_scores[section] / section_counts[section]
-        
-        return performance
-    
-    def _generate_improvement_suggestions(self) -> List[str]:
-        """개선 제안 생성"""
-        suggestions = []
-        
-        # 1. 저성능 섹션 분석
-        reliability = self.analytics.get_section_reliability()
-        low_performing = [s for s, r in reliability.items() if r < 0.5]
-        if low_performing:
-            suggestions.append(
-                f"⚠️ 다음 섹션들의 신뢰도가 낮습니다: "
-                f"{', '.join(self.config.SECTIONS.get(s, {}).get('title', s) for s in low_performing[:3])}. "
-                f"사용을 재검토하거나 대체 섹션을 고려하세요."
-            )
-        
-        # 2. 미사용 고성능 섹션
-        data = self.analytics.load_data()
-        used_sections = set(data.get('section_counts', {}).keys())
-        all_sections = set(self.config.SECTIONS.keys())
-        unused = all_sections - used_sections
-        
-        if unused:
-            suggestions.append(
-                f"💡 다음 섹션들을 활용해보세요: "
-                f"{', '.join(self.config.SECTIONS.get(s, {}).get('title', s) for s in list(unused)[:3])}"
-            )
-        
-        # 3. 최적 조합 제안
-        best_combo = self._find_best_section_combination()
-        if best_combo:
-            suggestions.append(
-                f"🎯 최고 성능 섹션 조합: "
-                f"{', '.join(self.config.SECTIONS.get(s, {}).get('title', s) for s in best_combo)}"
-            )
-        
-        return suggestions
-    
-    def _find_best_section_combination(self) -> List[str]:
-        """최적 섹션 조합 찾기"""
-        data = self.analytics.load_data()
-        feedback = data.get('quality_feedback', [])
-        
-        # 높은 평가를 받은 섹션 조합 찾기
-        high_rated_combos = []
-        for fb in feedback:
-            if fb.get('overall_rating', 0) >= 8:
-                # 해당 article_id의 selection 찾기
-                for selection in data.get('selections', []):
-                    if selection.get('article_id') == fb.get('article_id'):
-                        high_rated_combos.append(selection['sections'])
-                        break
-        
-        if not high_rated_combos:
-            return []
-        
-        # 가장 자주 나타나는 섹션 찾기
-        from collections import Counter
-        section_freq = Counter()
-        for combo in high_rated_combos:
-            for section in combo:
-                section_freq[section] += 1
-        
-        # 상위 3-4개 섹션 반환
-        return [s[0] for s in section_freq.most_common(4)]
+                st.success("평가가 저장되었습니다!")
 
 
 def extend_section_analytics():
-    """SectionAnalytics 클래스에 추가 메서드 주입"""
+    """SectionAnalytics 클래스 확장"""
     
     def save_quality_feedback(self, article_id: str, overall_rating: int, 
-                            section_ratings: Dict[str, int], timestamp: str):
+                            section_ratings: Dict[str, int]):
         """품질 피드백 저장"""
-        data = self.load_data()
+        feedback_file = "feedback/quality_feedback.json"
         
-        if 'quality_feedback' not in data:
-            data['quality_feedback'] = []
+        try:
+            with open(feedback_file, 'r', encoding='utf-8') as f:
+                feedback_data = json.load(f)
+        except:
+            feedback_data = []
         
-        data['quality_feedback'].append({
+        feedback_data.append({
             'article_id': article_id,
+            'timestamp': datetime.now().isoformat(),
             'overall_rating': overall_rating,
-            'section_ratings': section_ratings,
-            'timestamp': timestamp
+            'section_ratings': section_ratings
         })
         
-        self.save_data(data)
+        with open(feedback_file, 'w', encoding='utf-8') as f:
+            json.dump(feedback_data, f, ensure_ascii=False, indent=2)
     
     def get_section_reliability(self) -> Dict[str, float]:
-        """섹션별 신뢰도 계산 (0-1)"""
-        data = self.load_data()
-        feedback = data.get('quality_feedback', [])
+        """섹션별 신뢰도 점수 계산"""
+        feedback_file = "feedback/quality_feedback.json"
+        
+        try:
+            with open(feedback_file, 'r', encoding='utf-8') as f:
+                feedback = json.load(f)
+        except:
+            feedback = []
         
         if not feedback:
-            # 피드백이 없으면 사용 빈도 기반 계산
-            total_uses = sum(data.get('section_counts', {}).values())
-            if total_uses == 0:
-                return {s: 0.5 for s in self.config.SECTIONS.keys()}
-            
-            return {
-                section: min(count / (total_uses * 0.2), 1.0)
-                for section, count in data.get('section_counts', {}).items()
-            }
+            # 기본 신뢰도
+            return {section: 0.5 for section in self.config.ALL_SECTIONS.keys()}
         
-        # 피드백 기반 신뢰도 계산
+        # 평균 평점 계산
         section_scores = {}
         section_counts = {}
         
@@ -464,7 +372,7 @@ def extend_section_analytics():
                 section_counts[section] += 1
         
         reliability = {}
-        for section in self.config.SECTIONS.keys():
+        for section in self.config.ALL_SECTIONS.keys():
             if section in section_counts and section_counts[section] > 0:
                 reliability[section] = section_scores[section] / section_counts[section]
             else:
@@ -480,3 +388,10 @@ def extend_section_analytics():
 # 모듈 로드 시 자동으로 확장
 extend_section_analytics()
 
+# 호환성을 위한 함수
+def get_analytics_handler():
+    """분석 핸들러 반환 (호환성 유지)"""
+    if PLOTLY_AVAILABLE:
+        return AnalyticsDashboard()
+    else:
+        return None

@@ -1,0 +1,369 @@
+/* 
+ * 전력산업 카드뉴스 섹션별 스타일
+ * 다크 테마 기준, 반응형 디자인 적용
+ */
+
+/* ========== 공통 스타일 ========== */
+.section-container {
+    padding: 2rem;
+    margin: 1.5rem 0;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.section-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--section-color) 0%, transparent 100%);
+}
+
+.section-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.section-icon {
+    font-size: 2rem;
+    animation: bounce 2s infinite;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.section-content {
+    color: #e0e0e0;
+    line-height: 1.8;
+}
+
+.section-item {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.section-item::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--section-color);
+    font-weight: bold;
+}
+
+/* ========== 섹션별 개별 스타일 ========== */
+
+/* 1. 배경 설명 섹션 */
+.background-section {
+    --section-color: #2C3E50;
+    background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+    border-left: 5px solid #1A252F;
+}
+
+.background-section .section-icon {
+    color: #3498DB;
+}
+
+.background-section .section-item {
+    background: rgba(52, 73, 94, 0.3);
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    margin: 0.8rem 0;
+}
+
+/* 2. 기술 상세 섹션 */
+.technical-section {
+    --section-color: #16A085;
+    background: linear-gradient(135deg, #16A085 0%, #1ABC9C 100%);
+    border-left: 5px solid #0E6655;
+}
+
+.technical-section .section-icon {
+    color: #48C9B0;
+    animation: rotate 4s linear infinite;
+}
+
+.technical-section code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: #A9DFBF;
+}
+
+/* 3. 비교 분석 섹션 */
+.comparison-section {
+    --section-color: #8E44AD;
+    background: linear-gradient(135deg, #8E44AD 0%, #9B59B6 100%);
+    border-left: 5px solid #6C3483;
+}
+
+.comparison-section .section-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.comparison-section .compare-item {
+    flex: 1;
+    min-width: 200px;
+    background: rgba(155, 89, 182, 0.2);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(155, 89, 182, 0.4);
+}
+
+/* 4. 통계/현황 섹션 */
+.statistics-section {
+    --section-color: #E74C3C;
+    background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%);
+    border-left: 5px solid #A93226;
+}
+
+.statistics-section .stat-number {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #FADBD8;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+.statistics-section .stat-label {
+    font-size: 0.9rem;
+    color: #F5B7B1;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* 5. 기대 효과 섹션 */
+.benefits-section {
+    --section-color: #27AE60;
+    background: linear-gradient(135deg, #27AE60 0%, #229954 100%);
+    border-left: 5px solid #1E8449;
+}
+
+.benefits-section .section-icon {
+    color: #58D68D;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.benefits-section .benefit-card {
+    background: rgba(46, 204, 113, 0.15);
+    border: 1px solid rgba(46, 204, 113, 0.3);
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 0.8rem 0;
+    transition: all 0.3s ease;
+}
+
+.benefits-section .benefit-card:hover {
+    background: rgba(46, 204, 113, 0.25);
+    transform: translateX(5px);
+}
+
+/* 6. 도전 과제 섹션 */
+.challenges-section {
+    --section-color: #E67E22;
+    background: linear-gradient(135deg, #E67E22 0%, #D35400 100%);
+    border-left: 5px solid #BA4A00;
+}
+
+.challenges-section .challenge-item {
+    background: rgba(230, 126, 34, 0.15);
+    border-left: 3px solid #F39C12;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.challenges-section .priority-high {
+    border-left-color: #E74C3C;
+    background: rgba(231, 76, 60, 0.15);
+}
+
+/* 7. 추진 일정 섹션 */
+.timeline-section {
+    --section-color: #3498DB;
+    background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%);
+    border-left: 5px solid #21618C;
+}
+
+.timeline-section .timeline-item {
+    position: relative;
+    padding-left: 3rem;
+    margin: 1.5rem 0;
+}
+
+.timeline-section .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    bottom: -1.5rem;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.timeline-section .timeline-date {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 2rem;
+    height: 2rem;
+    background: #2C3E50;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+/* 8. 주요 참여자 섹션 */
+.stakeholders-section {
+    --section-color: #F39C12;
+    background: linear-gradient(135deg, #F39C12 0%, #E67E22 100%);
+    border-left: 5px solid #D68910;
+}
+
+.stakeholders-section .stakeholder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.stakeholders-section .stakeholder-card {
+    background: rgba(243, 156, 18, 0.15);
+    border: 1px solid rgba(243, 156, 18, 0.3);
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* 9. 추진 절차 섹션 */
+.process-section {
+    --section-color: #1ABC9C;
+    background: linear-gradient(135deg, #1ABC9C 0%, #16A085 100%);
+    border-left: 5px solid #148F77;
+}
+
+.process-section .process-step {
+    display: flex;
+    align-items: center;
+    margin: 1rem 0;
+}
+
+.process-section .step-number {
+    background: #16A085;
+    color: white;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+/* 10. 정책/규제 섹션 */
+.policy-section {
+    --section-color: #34495E;
+    background: linear-gradient(135deg, #34495E 0%, #2C3E50 100%);
+    border-left: 5px solid #283747;
+}
+
+.policy-section .policy-item {
+    background: rgba(52, 73, 94, 0.3);
+    border: 1px solid rgba(52, 73, 94, 0.5);
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 8px;
+}
+
+.policy-section .policy-tag {
+    display: inline-block;
+    background: #5D6D7E;
+    color: white;
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+}
+
+/* ========== 반응형 디자인 ========== */
+@media (max-width: 768px) {
+    .section-container {
+        padding: 1.5rem;
+        margin: 1rem 0;
+    }
+    
+    .section-title {
+        font-size: 1.2rem;
+    }
+    
+    .section-icon {
+        font-size: 1.5rem;
+    }
+    
+    .statistics-section .stat-number {
+        font-size: 2rem;
+    }
+    
+    .comparison-section .compare-item {
+        min-width: 100%;
+    }
+}
+
+/* ========== 애니메이션 ========== */
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ========== 호버 효과 ========== */
+.section-container:hover .section-icon {
+    animation-duration: 0.5s;
+}
+
+.section-item:hover {
+    color: #ffffff;
+    padding-left: 2rem;
+    transition: all 0.3s ease;
+}
+
+/* ========== 다크모드 조정 ========== */
+@media (prefers-color-scheme: light) {
+    .section-content {
+        color: rgba(255, 255, 255, 0.95);
+    }
+    
+    .section-title {
+        text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+    }
+}

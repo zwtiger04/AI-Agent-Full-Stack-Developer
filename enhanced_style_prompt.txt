@@ -1,0 +1,98 @@
+[Enhanced 스타일 가이드 - 디폴트 양식 완전 구현]
+
+## 1. 필수 기본 설정
+- 폰트: @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+- 배경색: #0a0a0a (완전한 다크 테마)
+- 기본 텍스트: #ffffff
+- 여백과 라인높이: 넉넉하게 (line-height: 1.8)
+
+## 2. 색상 테마 (3색 그라데이션 필수)
+주제별 정확한 색상 적용:
+- 태양광/재생에너지: linear-gradient(135deg, #f59e0b 0%, #ef4444 50%, #dc2626 100%)
+- ESS/배터리: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)
+- 정책/제도: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%)
+- 해상풍력: linear-gradient(135deg, #0052cc 0%, #00b4d8 50%, #0077b6 100%)
+- VPP/전력중개: linear-gradient(135deg, #06b6d4 0%, #0891b2 50%, #0e7490 100%)
+
+## 3. 히어로 섹션 (복잡한 배경 효과 필수)
+.hero {
+    background: [주제별 3색 그라데이션];
+    min-height: 500px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(주색상, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(주색상, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(주색상, 0.2) 0%, transparent 50%);
+    animation: float 15s ease-in-out infinite;
+}
+
+## 4. 홈 버튼 (우상단 고정)
+.home-button {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    background: rgba(주색상, 0.2);
+    border: 2px solid rgba(주색상, 0.5);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+}
+
+## 5. 필수 컴포넌트 클래스명
+- insight-card (NOT card)
+- insight-grid (NOT grid)
+- insight-icon
+- insight-title
+- stat-card (NOT stat)
+- stat-value
+- stat-label
+- timeline-item
+- timeline-marker
+- timeline-content
+
+## 6. 고급 효과 필수
+- ::before 요소로 추가 배경 효과
+- hover 시 transform: translateY(-10px)
+- box-shadow 효과
+- backdrop-filter 사용
+- counter 애니메이션 (숫자 카운트업)
+
+## 7. 섹션 구조 (정확한 이모지와 제목)
+1. 🎯 핵심 인사이트 (3개 카드)
+2. 📊 주요 성과 및 지표 (4개 통계)
+3. 🌍 진행 경과 (타임라인)
+4. 💬 전문가 의견
+5. 🔮 시사점 및 전망
+
+## 8. 애니메이션 (CSS 직접 구현)
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(10deg); }
+}
+
+@keyframes countUp {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.fade-in {
+    opacity: 0;
+    animation: fadeInUp 0.8s ease forwards;
+}
+
+## 9. 반응형 디자인
+- 데스크톱: 그리드 3-4열
+- 태블릿: 그리드 2열
+- 모바일: 단일 열, 폰트 크기 조정

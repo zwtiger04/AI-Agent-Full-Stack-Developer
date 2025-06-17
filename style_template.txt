@@ -1,0 +1,63 @@
+/* 디폴트 양식 필수 스타일 가이드 */
+
+/* 글씨 크기 */
+h1 { font-size: 3rem; font-weight: 800; }
+h2 { font-size: 2.5rem; margin-bottom: 2rem; }
+.subtitle { font-size: 1.1rem; }
+.insight-icon { font-size: 3rem; }
+.stat-number { font-size: 3rem; font-weight: 700; }
+body { font-size: 1.1rem; line-height: 1.8; }
+
+/* 백그라운드 도형 - 반드시 포함! */
+.hero::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(색상1, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(색상2, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(색상3, 0.2) 0%, transparent 50%);
+    animation: float 15s ease-in-out infinite;
+}
+
+.insight-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(메인색상, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+/* 애니메이션 - 정확히 이대로! */
+@keyframes float {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    33% { transform: translate(30px, -30px) rotate(120deg); }
+    66% { transform: translate(-20px, 20px) rotate(240deg); }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes countUp {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* 필수 섹션 - 반드시 포함! */
+<!-- 전망 섹션 -->
+<div class="section fade-in">
+    <h2>🔮 향후 전망</h2>
+    <div class="expert-quote">
+        "전문가 의견이나 향후 전망 내용"
+        <p style="text-align: right; margin-top: 20px; font-style: normal; color: 메인색상;">
+            - 출처 또는 전문가 이름
+        </p>
+    </div>
+</div>

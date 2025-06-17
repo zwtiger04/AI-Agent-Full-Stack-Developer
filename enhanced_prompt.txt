@@ -1,0 +1,153 @@
+당신은 전력산업 전문 웹 디자이너입니다. 다음 기사를 기반으로 Enhanced 스타일 가이드에 따라 시각적으로 매력적인 HTML 카드뉴스를 만들어주세요.
+
+[기사 정보]
+제목: {article['title']}
+요약: {article['summary']}
+핵심내용: {article['content']}
+키워드: {', '.join(article.get('keywords', []))}
+원문 URL: {article.get('url', '')}
+
+[Enhanced 스타일 가이드 - 필수 준수사항]
+
+## 1. 색상 테마 적용
+주제별 색상 테마를 정확히 적용하세요:
+- 태양광/재생에너지: 오렌지-빨간색 그라데이션 (#f59e0b → #ef4444 → #dc2626)
+- ESS/배터리: 초록색 그라데이션 (#10b981 → #059669 → #047857)
+- 정책/제도: 보라색 그라데이션 (#6366f1 → #4f46e5 → #4338ca)
+- 해상풍력/풍력: 파란색 그라데이션 (#0052cc → #00b4d8 → #0077b6)
+- VPP/전력중개: 민트-청록색 그라데이션 (#06b6d4 → #0891b2 → #0e7490)
+
+현재 기사 테마 색상:
+- 주 색상: {color_theme['primary']}
+- 보조 색상: {color_theme['secondary']}
+- 그라데이션: {color_theme['gradient']}
+
+## 2. 필수 폰트 import
+```css
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+```
+
+## 3. 기본 설정
+```css
+body {{
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: #0a0a0a;
+    color: #ffffff;
+    line-height: 1.8;
+    margin: 0;
+    padding: 0;
+}}
+```
+
+## 4. 필수 레이아웃 구조
+
+### 히어로 섹션 (그라데이션 배경)
+```html
+<div class="hero" style="background: {color_theme['gradient']};">
+    <div class="hero-bg-animation"></div>
+    <h1 class="hero-title">[메인 제목]<br><span class="hero-subtitle">[부제목]</span></h1>
+    <div class="hero-meta">
+        <span>🏢 [관련 기관]</span>
+        <span>🌏 [카테고리]</span>
+        <span>⚡ [핵심 키워드]</span>
+    </div>
+</div>
+```
+
+### 홈 버튼 (우상단 고정)
+```html
+<a href="../improved_summary.html" class="home-button">
+    <svg>...</svg> 홈으로
+</a>
+```
+
+### 컨테이너 구조
+```html
+<div class="container">
+    <!-- 섹션 1: 핵심 인사이트 -->
+    <div class="section fade-in">
+        <h2>🎯 핵심 인사이트</h2>
+        <div class="insight-grid">
+            <div class="insight-card">
+                <span class="insight-icon">[아이콘]</span>
+                <h3 class="insight-title">[제목]</h3>
+                <p>[설명]</p>
+            </div>
+            <!-- 총 3개의 insight-card -->
+        </div>
+    </div>
+    
+    <!-- 섹션 2: 주요 성과 및 지표 -->
+    <div class="section fade-in">
+        <h2>📊 주요 성과 및 지표</h2>
+        <div class="stats-grid">
+            <div class="stat-card counter">
+                <span class="stat-value" data-target="[숫자]">0</span>
+                <span class="stat-label">[라벨]</span>
+            </div>
+            <!-- 총 4개의 stat-card -->
+        </div>
+    </div>
+    
+    <!-- 섹션 3: 타임라인 또는 상세 내용 -->
+    <div class="section fade-in">
+        <h2>🌍 진행 경과</h2>
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-date">[날짜/단계]</div>
+                    <h3>[제목]</h3>
+                    <p>[내용]</p>
+                </div>
+            </div>
+            <!-- 여러 개의 timeline-item -->
+        </div>
+    </div>
+    
+    <!-- 섹션 4: 전문가 의견 또는 핵심 메시지 -->
+    <div class="section fade-in">
+        <h2>💬 전문가 의견</h2>
+        <div class="expert-quote">
+            <blockquote>
+                "[인용문]"
+            </blockquote>
+            <cite>- [출처/이름]</cite>
+        </div>
+    </div>
+    
+    <!-- 섹션 5: 시사점 및 전망 -->
+    <div class="section fade-in">
+        <h2>🔮 시사점 및 전망</h2>
+        <p>[미래 전망 내용]</p>
+        <div class="insight-grid">
+            <!-- 추가 인사이트 카드들 -->
+        </div>
+    </div>
+</div>
+```
+
+## 5. 필수 애니메이션
+- fadeInUp: 스크롤 시 아래에서 위로 페이드인
+- counter: 숫자 카운트업 애니메이션
+- float: 히어로 배경 floating 애니메이션
+- hover 효과: 모든 카드에 호버 시 transform 효과
+
+## 6. 반응형 디자인
+```css
+@media (max-width: 768px) {{
+    .insight-grid, .stats-grid {{ grid-template-columns: 1fr; }}
+    .hero-title {{ font-size: 2.5rem; }}
+}}
+```
+
+{emphasis_prompt}
+
+[특별 요구사항]
+1. 실제 기사 내용을 기반으로 구체적인 숫자와 통계를 활용하세요
+2. 각 섹션의 아이콘은 내용과 관련된 이모지를 사용하세요
+3. 색상은 반드시 주제에 맞는 하나의 테마만 일관되게 사용하세요
+4. 모든 애니메이션은 사용자 경험을 향상시키는 방향으로 적용하세요
+5. 카운터 애니메이션은 실제 숫자 데이터가 있는 경우에만 사용하세요
+
+완전한 HTML 파일을 생성해주세요. Enhanced 스타일 가이드의 모든 요소를 포함시켜주세요.

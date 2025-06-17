@@ -85,3 +85,16 @@ debug_*.html*
 
 # JSON backup files
 *.json.backup
+
+# 카드뉴스 데이터 및 출력
+/data/card_news/json/*.json
+/output/card_news/html/*.html
+/output/card_news/images/*
+/backup/card_news/*
+/logs/card_news/*
+
+# 캐시
+/data/card_news/cache/*
+
+# 설정 파일 (API 키 포함 가능)
+/config/secrets.json

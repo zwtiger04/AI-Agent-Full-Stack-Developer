@@ -59,6 +59,13 @@ graph TD
     H --> I[FLOW-009: HTML 저장]
 ```
 
+
+> ⚠️ **경로 변경 안내**
+> - 기존: 프로젝트 루트에 JSON 파일 저장
+> - 변경: `data/card_news/json/` 디렉토리에 모든 데이터 저장
+> - 기존: `/mnt/c/Users/KJ/Desktop/` Windows 경로 사용
+> - 변경: `output/card_news/html/` 프로젝트 내부 경로 사용
+
 ## 🚀 빠른 시작 가이드
 
 ### 1️⃣ 환경 설정 [TASK-ENV-001]
@@ -150,38 +157,31 @@ streamlit run card_news_app_integrated.py --server.port 8501 --server.address 0.
 ls -la backups/backup_20250615_114534/
 ```
 
-## 📁 프로젝트 구조 (ID 매핑)
+## 📁 프로젝트 구조
+
+> ⚠️ **중요**: 2025-06-15 경로 구조가 표준화되었습니다. 자세한 내용은 [PATH_STRUCTURE_GUIDE.md](PATH_STRUCTURE_GUIDE.md)를 참조하세요.
+
 ```
 AI-Agent-Full-Stack-Developer/
-├── 📄 설정 파일
-│   ├── .env [FILE-ENV-001]
-│   ├── requirements.txt [FILE-REQ-001]
-│   └── .gitignore [FILE-GIT-001]
-│
-├── 🐍 메인 스크립트
-│   ├── main.py [MOD-MAIN-001]
-│   ├── card_news_app_integrated.py [MOD-CARDNEWS-MAIN-001]
-│   └── test_*.py [MOD-TEST-XXX]
-│
-├── 📦 모듈
-│   ├── crawlers/ [DIR-CRAWLERS-001]
-│   ├── notion/ [DIR-NOTION-001]
-│   ├── processors/ [DIR-PROCESSORS-001]
-│   ├── recommenders/ [DIR-RECOMMENDERS-001]
-│   └── card_news/ [DIR-CARDNEWS-001]
-│
-├── 📊 데이터
-│   ├── feedback/ [DIR-FEEDBACK-001]
-│   ├── logs/ [DIR-LOGS-001]
-│   ├── pending_cardnews.json [FILE-PENDING-001]
-│   └── cost_tracking.json [FILE-COST-001]
-│
-├── 💾 백업
-│   └── backups/ [DIR-BACKUPS-001]
-│
-└── 📚 문서
-    ├── README.md [DOC-README-001]
-    └── INTEGRATED_PROJECT_GUIDE.md [DOC-GUIDE-001]
+├── main.py                    # 메인 크롤러 실행
+├── run_level2.py             # 카드뉴스 자동화 실행
+├── card_news_app.py          # Streamlit UI
+├── card_news_paths.py        # 🆕 경로 관리 모듈
+├── watch_interested_articles.py  # 관심 기사 모니터링
+├── crawlers/                 # 크롤러 모듈
+│   └── electimes_crawler.py  # 전기신문 크롤러
+├── notion/                   # 노션 연동
+│   └── notion_client.py      # 노션 API 클라이언트
+├── data/card_news/          # 🆕 표준화된 데이터 디렉토리
+│   ├── json/                # JSON 데이터 파일
+│   └── analytics/           # 분석 데이터
+├── output/card_news/        # 🆕 표준화된 출력 디렉토리
+│   └── html/                # 생성된 카드뉴스
+├── backup/card_news/        # 🆕 자동 백업
+├── logs/card_news/          # 🆕 실행 로그
+├── config/                  # 🆕 설정 파일
+│   └── paths.json           # 경로 설정
+└── .env                     # 환경변수 (API 키)
 ```
 
 ## 🔧 환경변수 설정

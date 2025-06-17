@@ -1,0 +1,81 @@
+        prompt = f"""당신은 전력산업 전문 웹 디자이너입니다. 아래의 Enhanced 스타일 가이드와 HTML 템플릿을 반드시 준수하여 카드뉴스를 생성하세요.
+
+[기사 정보]
+제목: {article['title']}
+요약: {article['summary']}
+핵심내용: {article['content']}
+키워드: {', '.join(article.get('keywords', []))}
+원문 URL: {article.get('url', '')}
+
+[중요! 필수 준수사항]
+1. ❌ 절대 외부 CSS/JS 파일 참조 금지 (styles.css, animations.js 등)
+2. ✅ 모든 스타일은 <style> 태그 내에 인라인으로 포함
+3. ✅ 완전히 독립적인 단일 HTML 파일로 생성
+4. ✅ 아래 템플릿 구조를 정확히 따르세요
+
+[필수 HTML 템플릿]
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{article['title']} - 전력산업 뉴스</title>
+    <style>
+        /* 반드시 이 스타일 블록 안에 모든 CSS를 포함하세요 */
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.8;
+            overflow-x: hidden;
+        }}
+        
+        /* Enhanced 스타일 가이드의 모든 CSS를 여기에 포함 */
+        /* 컨테이너, 홈버튼, 히어로, 섹션 등 모든 스타일 정의 */
+    </style>
+</head>
+<body>
+    <!-- 홈 버튼 - 반드시 포함 -->
+    <a href="../improved_summary.html" class="home-button">🏠</a>
+    
+    <!-- 히어로 섹션 -->
+    <div class="hero">
+        <div class="container">
+            <h1>{article['title']}</h1>
+            <p class="subtitle">기사 요약</p>
+        </div>
+    </div>
+    
+    <!-- 컨텐츠 섹션들 -->
+    <div class="container">
+        <!-- 여기에 기사 내용에 맞는 5개 섹션을 구성하세요 -->
+    </div>
+</body>
+</html>
+
+[컨텐츠 구성 가이드라인]
+기사 내용을 분석하여 다음 5개 섹션 중 적절한 것을 선택하여 구성하세요:
+
+1. 🎯 핵심 인사이트 (insight-grid, insight-card 클래스 사용)
+2. 📊 주요 성과 및 지표 (stats-grid, stat-card 클래스 사용)
+3. 🌍 진행 경과/타임라인 (timeline, timeline-item 클래스 사용)
+4. 💬 전문가 의견/인용문 (expert-quote 클래스 사용)
+5. 🔮 시사점 및 전망
+
+{emphasis_prompt}
+
+[최종 체크리스트]
+✓ 모든 스타일이 <style> 태그 안에 포함되었는가?
+✓ 외부 CSS/JS 파일 참조가 없는가?
+✓ 홈 버튼이 포함되었는가?
+✓ 완전히 독립적인 HTML 파일인가?
+
+위의 템플릿을 기반으로 기사 내용에 맞는 고품질 HTML 카드뉴스를 생성하세요."""

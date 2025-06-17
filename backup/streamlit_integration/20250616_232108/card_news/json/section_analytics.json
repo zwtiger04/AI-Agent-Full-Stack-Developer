@@ -1,0 +1,208 @@
+{
+  "selections": [
+    {
+      "article_id": "test_001",
+      "timestamp": "2025-06-12T16:49:29.845375",
+      "sections": [
+        "technical",
+        "statistics",
+        "timeline"
+      ],
+      "scores": {
+        "technical": 9,
+        "statistics": 7,
+        "timeline": 8
+      },
+      "article_keywords": [
+        "재생에너지",
+        "태양광",
+        "2030"
+      ]
+    },
+    {
+      "article_id": "test_002",
+      "timestamp": "2025-06-12T16:49:29.846159",
+      "sections": [
+        "background",
+        "policy",
+        "challenges"
+      ],
+      "scores": {
+        "background": 8,
+        "policy": 6,
+        "challenges": 7
+      },
+      "article_keywords": [
+        "정책",
+        "규제",
+        "전력망"
+      ]
+    },
+    {
+      "article_id": "test_003",
+      "timestamp": "2025-06-12T16:49:29.846769",
+      "sections": [
+        "comparison",
+        "benefits",
+        "process"
+      ],
+      "scores": {
+        "comparison": 9,
+        "benefits": 8,
+        "process": 5
+      },
+      "article_keywords": [
+        "VPP",
+        "ESS",
+        "효율성"
+      ]
+    },
+    {
+      "article_id": "test_004",
+      "timestamp": "2025-06-12T16:49:29.847233",
+      "sections": [
+        "technical",
+        "statistics",
+        "policy"
+      ],
+      "scores": {
+        "technical": 10,
+        "statistics": 8,
+        "policy": 9
+      },
+      "article_keywords": [
+        "재생에너지",
+        "VPP",
+        "정책"
+      ]
+    },
+    {
+      "article_id": "test_005",
+      "timestamp": "2025-06-12T16:49:29.847701",
+      "sections": [
+        "timeline",
+        "stakeholders",
+        "challenges"
+      ],
+      "scores": {
+        "timeline": 7,
+        "stakeholders": 6,
+        "challenges": 8
+      },
+      "article_keywords": [
+        "2030",
+        "한전",
+        "도전과제"
+      ]
+    },
+    {
+      "article_id": "test_article_0",
+      "timestamp": "2025-06-15T14:45:50.469774",
+      "sections": [
+        "technical",
+        "statistics",
+        "timeline"
+      ],
+      "scores": {
+        "technical": 0,
+        "statistics": 0,
+        "timeline": 0
+      }
+    },
+    {
+      "article_id": "test_article_1",
+      "timestamp": "2025-06-15T14:45:50.471067",
+      "sections": [
+        "technical",
+        "statistics",
+        "timeline"
+      ],
+      "scores": {
+        "technical": 5,
+        "statistics": 3,
+        "timeline": 2
+      }
+    },
+    {
+      "article_id": "test_article_2",
+      "timestamp": "2025-06-15T14:45:50.471503",
+      "sections": [
+        "technical",
+        "statistics"
+      ],
+      "scores": {
+        "technical": 0,
+        "statistics": 3
+      }
+    },
+    {
+      "article_id": "test_article_3",
+      "timestamp": "2025-06-15T14:45:50.471963",
+      "sections": [
+        "technical",
+        "statistics"
+      ],
+      "scores": {
+        "technical": 5,
+        "statistics": 3
+      }
+    },
+    {
+      "article_id": "test_001",
+      "timestamp": "2025-06-15T15:04:25.584564",
+      "sections": [
+        "technical",
+        "policy",
+        "timeline"
+      ],
+      "scores": {
+        "technical": 0,
+        "policy": 0,
+        "timeline": 0
+      }
+    },
+    {
+      "article_id": "test_002",
+      "timestamp": "2025-06-15T15:04:25.585156",
+      "sections": [
+        "background",
+        "challenges"
+      ],
+      "scores": {
+        "background": 8,
+        "challenges": 7
+      }
+    },
+    {
+      "article_id": "test_003",
+      "timestamp": "2025-06-15T15:04:25.586025",
+      "sections": [
+        "technical",
+        "policy",
+        "timeline"
+      ],
+      "scores": {
+        "technical": 9,
+        "policy": 0,
+        "timeline": 8
+      }
+    }
+  ],
+  "section_counts": {
+    "technical": 8,
+    "statistics": 6,
+    "timeline": 6,
+    "background": 2,
+    "policy": 4,
+    "challenges": 3,
+    "comparison": 1,
+    "benefits": 1,
+    "process": 1,
+    "stakeholders": 1
+  },
+  "metadata": {
+    "created_at": "2025-06-12T16:49:29.845115",
+    "last_updated": "2025-06-12T16:49:29.847869",
+    "version": "1.0"
+  }
+}

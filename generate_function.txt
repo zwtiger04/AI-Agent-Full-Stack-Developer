@@ -1,0 +1,89 @@
+    def generate_card_news(self, article: Dict, color_theme: Dict, emphasis: List[str]) -> str:
+        """Claude API를 통한 카드뉴스 생성"""
+        
+        # 강조 요소 프롬프트 생성
+        emphasis_prompt = ""
+        if emphasis:
+            emphasis_prompt = f"\n\n특별히 강조할 요소:\n" + "\n".join([f"- {e}" for e in emphasis])
+        
+        prompt = f"""당신은 전력산업 전문 웹 디자이너입니다. 다음 기사를 기반으로 Enhanced 스타일 가이드에 따라 시각적으로 매력적인 HTML 카드뉴스를 만들어주세요.
+
+[기사 정보]
+제목: {article['title']}
+요약: {article['summary']}
+핵심내용: {article['content']}
+키워드: {', '.join(article.get('keywords', []))}
+원문 URL: {article.get('url', '')}
+
+[Enhanced 스타일 가이드 - 필수 준수사항]
+
+## 1. 색상 테마 적용
+주제별 색상 테마를 정확히 적용하세요:
+- 태양광/재생에너지: 오렌지-빨간색 그라데이션 (#f59e0b → #ef4444 → #dc2626)
+- ESS/배터리: 초록색 그라데이션 (#10b981 → #059669 → #047857)
+- 정책/제도: 보라색 그라데이션 (#6366f1 → #4f46e5 → #4338ca)
+- 해상풍력/풍력: 파란색 그라데이션 (#0052cc → #00b4d8 → #0077b6)
+- VPP/전력중개: 민트-청록색 그라데이션 (#06b6d4 → #0891b2 → #0e7490)
+
+현재 기사 테마 색상:
+- 주 색상: {color_theme['primary']}
+- 보조 색상: {color_theme['secondary']}
+- 그라데이션: {color_theme['gradient']}
+
+## 2. 필수 구조 (반드시 포함)
+1. Pretendard 폰트 import
+2. 다크 배경 (#0a0a0a)
+3. 히어로 섹션 (그라데이션 배경, 애니메이션)
+4. 홈 버튼 (우상단 고정, ../improved_summary.html 링크)
+5. 최소 5개 섹션:
+   - 🎯 핵심 인사이트 (3개 카드)
+   - 📊 주요 성과 및 지표 (4개 통계)
+   - 🌍 진행 경과 (타임라인)
+   - 💬 전문가 의견
+   - 🔮 시사점 및 전망
+
+## 3. 필수 애니메이션
+- fadeInUp 스크롤 애니메이션
+- counter 숫자 카운트업
+- float 배경 애니메이션
+- 모든 카드 hover 효과
+
+## 4. 반응형 디자인
+- 768px 이하에서 그리드 1열로 변경
+- 폰트 크기 조정
+
+{emphasis_prompt}
+
+완전한 HTML 파일을 생성하되, Enhanced 스타일 가이드의 모든 요소를 반드시 포함시켜주세요. 특히 홈 버튼, 애니메이션, 5개 섹션 구조는 필수입니다."""
+
+        try:
+            response = self.anthropic_client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=8000
+            )
+            
+            # 비용 기록
+            self.cost_manager.add_cost(COST_PER_REQUEST)
+            
+            # HTML 추출 (마크다운 코드블록 처리)
+            raw_content = response.content[0].text
+            
+            # 마크다운 코드블록에서 HTML 추출
+            html_match = re.search(r'```html\s*(.*?)```', raw_content, re.DOTALL)
+            if html_match:
+                content = html_match.group(1).strip()
+            else:
+                # 코드블록이 없으면 전체 내용 사용
+                content = raw_content
+            
+            # HTML 태그가 없으면 기본 구조 추가
+            if not content.strip().startswith('<!DOCTYPE') and not content.strip().startswith('<html'):
+                content = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{article['title']}</title>
+</head>
+<body>

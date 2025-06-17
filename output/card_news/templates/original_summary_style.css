@@ -1,0 +1,257 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    background: #0f0f0f;
+    color: #ffffff;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    text-align: center;
+    padding: 60px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 30px;
+    margin-bottom: 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.header h1 {
+    font-size: 48px;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.header .subtitle {
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.9);
+    position: relative;
+    z-index: 1;
+}
+
+.news-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+.news-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 30px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.news-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.news-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+}
+
+.news-card:hover::before {
+    transform: scaleX(1);
+}
+
+.card-category {
+    display: inline-block;
+    padding: 5px 15px;
+    background: rgba(102, 126, 234, 0.2);
+    color: #667eea;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.card-title {
+    font-size: 22px;
+    margin-bottom: 20px;
+    color: #fff;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.card-summary {
+    font-size: 16px;
+    color: #ccc;
+    line-height: 1.8;
+    margin-bottom: 20px;
+}
+
+.card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #888;
+    font-size: 14px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.read-more {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: gap 0.3s ease;
+}
+
+.read-more:hover {
+    gap: 10px;
+}
+
+/* 카테고리별 색상 */
+.category-ess { background: rgba(102, 126, 234, 0.2); color: #667eea; }
+.category-solar { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+.category-policy { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+.category-market { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+.category-tech { background: rgba(156, 39, 176, 0.2); color: #9c27b0; }
+
+.stats-section {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.stats-title {
+    font-size: 28px;
+    margin-bottom: 30px;
+    color: #667eea;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+}
+
+.stat-item {
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 15px;
+    padding: 25px;
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    background: rgba(102, 126, 234, 0.2);
+    transform: scale(1.05);
+}
+
+.stat-number {
+    font-size: 36px;
+    font-weight: 900;
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.stat-label {
+    font-size: 16px;
+    color: #aaa;
+}
+
+/* 애니메이션 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.news-card {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.news-card:nth-child(1) { animation-delay: 0.1s; }
+.news-card:nth-child(2) { animation-delay: 0.2s; }
+.news-card:nth-child(3) { animation-delay: 0.3s; }
+.news-card:nth-child(4) { animation-delay: 0.4s; }
+.news-card:nth-child(5) { animation-delay: 0.5s; }
+.news-card:nth-child(6) { animation-delay: 0.6s; }
+.news-card:nth-child(7) { animation-delay: 0.7s; }
+.news-card:nth-child(8) { animation-delay: 0.8s; }
+.news-card:nth-child(9) { animation-delay: 0.9s; }
+.news-card:nth-child(10) { animation-delay: 1.0s; }
+
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 32px;
+    }
+    
+    .news-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* 추가 카테고리 스타일 */
+.category-vpp {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.category-tech {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.category-general {
+    background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.category-renewable {
+    background: linear-gradient(135deg, #10b981, #059669);
+}

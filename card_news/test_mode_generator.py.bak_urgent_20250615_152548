@@ -1,0 +1,310 @@
+"""
+카드뉴스 테스트 모드 생성기
+실제 API 호출 없이 더미 HTML을 생성하여 전체 프로세스를 테스트
+"""
+
+from datetime import datetime
+import random
+
+class TestModeGenerator:
+    """테스트 모드용 카드뉴스 생성기"""
+    
+    def __init__(self):
+        self.templates = {
+            'minimal': self._get_minimal_template(),
+            'modern': self._get_modern_template(),
+            'professional': self._get_professional_template()
+        }
+    
+    def generate_test_card_news(self, article, theme='modern', sections=None):
+        """테스트용 카드뉴스 HTML 생성"""
+        
+        # 테마 선택
+        template = self.templates.get(theme, self.templates['modern'])
+        
+        # 더미 데이터 생성
+        title = article.get('title', '테스트 제목')
+        content = article.get('content', '테스트 내용입니다.')
+        summary = article.get('summary', '테스트 요약입니다.')
+        
+        # 섹션 정보
+        section_info = ""
+        if sections:
+            section_info = f"<p style='color: #666; font-size: 14px;'>선택된 섹션: {', '.join(sections)}</p>"
+        
+        # 템플릿에 데이터 삽입
+        html = template.format(
+            title=title[:50] + '...' if len(title) > 50 else title,
+            summary=summary[:100] + '...' if len(summary) > 100 else summary,
+            content=content[:200] + '...' if len(content) > 200 else content,
+            section_info=section_info,
+            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            test_id=random.randint(1000, 9999)
+        )
+        
+        return html
+    
+    def _get_minimal_template(self):
+        """미니멀 템플릿"""
+        return """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>테스트 카드뉴스 - 미니멀</title>
+    <style>
+        body {{
+            font-family: 'Noto Sans KR', sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }}
+        .card {{
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }}
+        h1 {{
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }}
+        .test-badge {{
+            background: #ff6b6b;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="test-badge">테스트 모드 #{test_id}</div>
+        <h1>{title}</h1>
+        <p style="color: #666; margin-bottom: 20px;">{summary}</p>
+        <div style="border-top: 1px solid #eee; padding-top: 20px;">
+            <p>{content}</p>
+            {section_info}
+        </div>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
+            <p>🧪 테스트 모드 - API 호출 없음</p>
+            <p>생성 시간: {timestamp}</p>
+        </div>
+    </div>
+</body>
+</html>
+        """
+    
+    def _get_modern_template(self):
+        """모던 템플릿"""
+        return """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>테스트 카드뉴스 - 모던</title>
+    <style>
+        body {{
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+        .container {{
+            width: 90%;
+            max-width: 600px;
+        }}
+        .card {{
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            position: relative;
+        }}
+        .test-indicator {{
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }}
+        .content {{
+            padding: 40px;
+        }}
+        h1 {{
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }}
+        .summary {{
+            margin-top: 15px;
+            opacity: 0.9;
+            line-height: 1.6;
+        }}
+        .main-content {{
+            color: #333;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }}
+        .footer {{
+            background: #f8f9fa;
+            padding: 20px 40px;
+            font-size: 14px;
+            color: #666;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="test-indicator">TEST #{test_id}</div>
+                <h1>{title}</h1>
+                <p class="summary">{summary}</p>
+            </div>
+            <div class="content">
+                <p class="main-content">{content}</p>
+                {section_info}
+            </div>
+            <div class="footer">
+                <p>🧪 테스트 모드로 생성됨 (API 미사용)</p>
+                <p>생성 시간: {timestamp}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        """
+    
+    def _get_professional_template(self):
+        """프로페셔널 템플릿"""
+        return """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>테스트 카드뉴스 - 프로페셔널</title>
+    <style>
+        body {{
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            background: #f8f9fa;
+        }}
+        .card {{
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            overflow: hidden;
+        }}
+        .test-header {{
+            background: #ffeaa7;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #2d3436;
+            border-bottom: 1px solid #fdcb6e;
+        }}
+        .content-header {{
+            padding: 30px;
+            border-bottom: 1px solid #e1e4e8;
+        }}
+        h1 {{
+            margin: 0 0 15px 0;
+            font-size: 24px;
+            font-weight: 600;
+            color: #24292e;
+        }}
+        .meta {{
+            color: #586069;
+            font-size: 14px;
+        }}
+        .content-body {{
+            padding: 30px;
+        }}
+        .summary {{
+            background: #f6f8fa;
+            border-left: 4px solid #0366d6;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            color: #24292e;
+        }}
+        .main-text {{
+            color: #24292e;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }}
+        .section-tags {{
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }}
+        .tag {{
+            background: #e1e4e8;
+            color: #24292e;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 14px;
+        }}
+        .footer {{
+            background: #f6f8fa;
+            padding: 20px 30px;
+            border-top: 1px solid #e1e4e8;
+            font-size: 13px;
+            color: #586069;
+        }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="test-header">
+            ⚠️ 테스트 모드 - ID: {test_id} (실제 API 호출 없음)
+        </div>
+        <div class="content-header">
+            <h1>{title}</h1>
+            <div class="meta">전력산업 뉴스 · 테스트 생성</div>
+        </div>
+        <div class="content-body">
+            <div class="summary">
+                {summary}
+            </div>
+            <p class="main-text">{content}</p>
+            {section_info}
+        </div>
+        <div class="footer">
+            <p>🧪 이 카드뉴스는 테스트 모드로 생성되었습니다.</p>
+            <p>생성 시간: {timestamp} | 비용: $0.00</p>
+        </div>
+    </div>
+</body>
+</html>
+        """
+    
+    @staticmethod
+    def get_test_cost_info():
+        """테스트 모드 비용 정보"""
+        return {
+            'input_tokens': 0,
+            'output_tokens': 0,
+            'total_cost': 0.0,
+            'message': '테스트 모드 - 비용 없음'
+        }

@@ -5,7 +5,7 @@
 import re
 import json
 import logging
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Union
 from collections import Counter
 from datetime import datetime
 
@@ -179,13 +179,13 @@ class SectionSelector:
         
         return "\n".join(prompt_parts)
     
-    def save_selection_analytics(self, article_id: str, selected_sections: List[Tuple[str, int]]):
+    def save_selection_analytics(self, article_id: str, selected_sections: Union[List[str], List[Tuple[str, int]], List[Dict]]):
         """
         섹션 선택 데이터를 분석용으로 저장
         
         Args:
             article_id: 기사 ID
-            selected_sections: 선택된 섹션 리스트
+            selected_sections: 선택된 섹션 리스트 (문자열 리스트, 튜플 리스트, 또는 딕셔너리 리스트)
         """
         analytics_file = 'section_analytics.json'
         
@@ -196,18 +196,42 @@ class SectionSelector:
         except (FileNotFoundError, json.JSONDecodeError):
             analytics_data = {'selections': [], 'section_counts': {}}
         
+        # 선택된 섹션 정규화
+        normalized_sections = []
+        for section in selected_sections:
+            if isinstance(section, str):
+                normalized_sections.append((section, 0))
+            elif isinstance(section, (tuple, list)) and len(section) >= 2:
+                normalized_sections.append((str(section[0]), int(section[1])))
+            elif isinstance(section, (tuple, list)) and len(section) == 1:
+                normalized_sections.append((str(section[0]), 0))
+            elif isinstance(section, dict):
+                section_id = section.get('id', section.get('section_id', section.get('name', '')))
+                score = section.get('score', 0)
+                if section_id:
+                    normalized_sections.append((str(section_id), int(score)))
+        
         # 새 데이터 추가
         selection_record = {
             'article_id': article_id,
             'timestamp': datetime.now().isoformat(),
-            'sections': [s[0] for s in selected_sections],
-            'scores': {s[0]: s[1] for s in selected_sections}
+            'sections': [s[0] for s in normalized_sections],
+            'scores': {s[0]: s[1] for s in normalized_sections}
         }
         analytics_data['selections'].append(selection_record)
         
-        # 섹션별 사용 횟수 업데이트
-        for section_id, _ in selected_sections:
-            analytics_data['section_counts'][section_id] = analytics_data['section_counts'].get(section_id, 0) + 1
+        # 섹션별 사용 횟수 업데이트 (정규화된 데이터 사용)
+        for section_tuple in normalized_sections:
+            section_id = section_tuple[0]  # 이미 문자열로 변환됨
+            
+            # 추가 안전장치: section_id가 여전히 리스트인 경우 처리
+            if isinstance(section_id, list):
+                section_id = str(section_id[0]) if section_id else ''
+            elif not isinstance(section_id, str):
+                section_id = str(section_id)
+                
+            if section_id:
+                analytics_data['section_counts'][section_id] = analytics_data['section_counts'].get(section_id, 0) + 1
         
         # 저장
         with open(analytics_file, 'w', encoding='utf-8') as f:

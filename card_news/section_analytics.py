@@ -453,7 +453,19 @@ class SectionAnalytics:
             report += "## 📈 주요 지표\n\n"
             report += f"- **총 카드뉴스 생성**: {len(week_selections)}개\n"
             
-            unique_sections = set(s for sel in week_selections for s in sel.get('sections', []))
+            # 안전한 섹션 추출 (다양한 형식 처리)
+            unique_sections = set()
+            for sel in week_selections:
+                sections = sel.get('sections', [])
+                for s in sections:
+                    if isinstance(s, str):
+                        unique_sections.add(s)
+                    elif isinstance(s, (list, tuple)) and len(s) > 0:
+                        unique_sections.add(str(s[0]))
+                    elif isinstance(s, dict):
+                        section_id = s.get('id', s.get('section_id', s.get('name', '')))
+                        if section_id:
+                            unique_sections.add(str(section_id))
             report += f"- **사용된 고유 섹션**: {len(unique_sections)}개\n"
             
             avg_sections = sum(len(sel.get('sections', [])) for sel in week_selections) / len(week_selections) if week_selections else 0
@@ -606,6 +618,47 @@ class SectionAnalytics:
         section_scores = {section: stats.get("satisfaction_avg", 0) for section, stats in section_stats.items()}
         sorted_sections = sorted(section_scores.items(), key=lambda x: x[1], reverse=True)
         return [(section, score) for section, score in sorted_sections[:top_n]]
+
+    def get_basic_stats(self) -> Dict:
+        """
+        기본 통계 정보 반환
+        - total_generated: 총 생성된 카드뉴스 수
+        - avg_sections: 평균 섹션 수
+        - favorite_theme: 가장 많이 사용된 테마
+        """
+        data = self.load_data()
+        
+        # 총 생성 수 (selections 배열의 길이)
+        total_generated = len(data.get('selections', []))
+        
+        if total_generated == 0:
+            return {
+                'total_generated': 0,
+                'avg_sections': 0,
+                'favorite_theme': 'N/A'
+            }
+        
+        # 평균 섹션 수 계산
+        total_sections = sum(len(selection.get('sections', [])) 
+                           for selection in data.get('selections', []))
+        avg_sections = total_sections / total_generated if total_generated > 0 else 0
+        
+        # 선호 테마 계산
+        theme_counts = {}
+        for selection in data.get('selections', []):
+            theme = selection.get('theme', 'default')
+            theme_counts[theme] = theme_counts.get(theme, 0) + 1
+        
+        favorite_theme = 'default'
+        if theme_counts:
+            favorite_theme = max(theme_counts.items(), key=lambda x: x[1])[0]
+        
+        return {
+            'total_generated': total_generated,
+            'avg_sections': avg_sections,
+            'favorite_theme': favorite_theme
+        }
+
 
 if __name__ == '__main__':
     analytics = SectionAnalytics()

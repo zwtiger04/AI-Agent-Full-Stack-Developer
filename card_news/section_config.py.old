@@ -1,0 +1,184 @@
+"""
+전력산업 카드뉴스 섹션 설정
+각 섹션별 정의, 트리거 단어, 스타일 설정
+"""
+from typing import Dict, List, Optional
+
+class SectionConfig:
+    """섹션 설정 클래스"""
+    
+    # 필수 섹션 정의
+    REQUIRED_SECTIONS = {
+        1: {
+            'title': '타이틀/서론',
+            'description': '카드뉴스의 시작, 주제 소개',
+            'position': 'first',
+            'style': 'title-intro'
+        },
+        5: {
+            'title': '전문가 의견/시사점',
+            'description': '전문가 의견과 미래 시사점',
+            'position': 'last',
+            'style': 'expert-opinion'
+        }
+    }
+    
+    # 선택 가능한 10개 섹션 정의
+    OPTIONAL_SECTIONS = {
+        'background': {
+            'id': 'background',
+            'title': '배경 설명',
+            'description': '기술적/정책적 배경 설명',
+            'trigger_words': ['배경', '역사', '발전', '도입', '시작', '기원', '탄생', '과거'],
+            'min_items': 3,
+            'max_items': 5,
+            'style': 'background-section',
+            'icon': '📚'
+        },
+        'technical': {
+            'id': 'technical',
+            'title': '기술 상세',
+            'description': '기술적 세부사항 설명',
+            'trigger_words': ['기술', '시스템', '메커니즘', '원리', '구조', '설계', 'AI', '알고리즘', '효율', 'kW', 'MW', 'GW'],
+            'min_items': 3,
+            'max_items': 6,
+            'style': 'technical-section',
+            'icon': '⚙️'
+        },
+        'comparison': {
+            'id': 'comparison',
+            'title': '비교 분석',
+            'description': '국내외 사례 비교, 기술/정책 비교',
+            'trigger_words': ['비교', '대비', '차이', '우위', '경쟁', '선진국', '해외', '국내외', 'vs'],
+            'min_items': 2,
+            'max_items': 4,
+            'style': 'comparison-section',
+            'icon': '📊'
+        },
+        'statistics': {
+            'id': 'statistics',
+            'title': '통계/현황',
+            'description': '수치 데이터 및 현황 정보',
+            'trigger_words': ['통계', '현황', '수치', '데이터', '%', '증가', '감소', '규모', '용량', '발전량'],
+            'min_items': 3,
+            'max_items': 5,
+            'style': 'statistics-section',
+            'icon': '📈'
+        },
+        'benefits': {
+            'id': 'benefits',
+            'title': '기대 효과',
+            'description': '도입/적용 시 기대되는 효과',
+            'trigger_words': ['효과', '이점', '장점', '혜택', '개선', '향상', '절감', '수익', '경제성'],
+            'min_items': 3,
+            'max_items': 5,
+            'style': 'benefits-section',
+            'icon': '✨'
+        },
+        'challenges': {
+            'id': 'challenges',
+            'title': '도전 과제',
+            'description': '해결해야 할 문제점과 과제',
+            'trigger_words': ['문제', '과제', '도전', '우려', '리스크', '장애', '한계', '어려움', '제약'],
+            'min_items': 3,
+            'max_items': 5,
+            'style': 'challenges-section',
+            'icon': '🎯'
+        },
+        'timeline': {
+            'id': 'timeline',
+            'title': '추진 일정',
+            'description': '단계별 추진 계획 및 일정',
+            'trigger_words': ['일정', '계획', '로드맵', '단계', '년도', '2025', '2030', '향후', '예정'],
+            'min_items': 3,
+            'max_items': 6,
+            'style': 'timeline-section',
+            'icon': '📅'
+        },
+        'stakeholders': {
+            'id': 'stakeholders',
+            'title': '주요 참여자',
+            'description': '관련 기업, 기관, 이해관계자',
+            'trigger_words': ['기업', '업체', '기관', '정부', '협회', '참여자', '주체', '플레이어', '관계자'],
+            'min_items': 3,
+            'max_items': 5,
+            'style': 'stakeholders-section',
+            'icon': '👥'
+        },
+        'process': {
+            'id': 'process',
+            'title': '추진 절차',
+            'description': '단계별 진행 프로세스',
+            'trigger_words': ['절차', '과정', '프로세스', '단계', '방법', '진행', '추진', '실행'],
+            'min_items': 3,
+            'max_items': 6,
+            'style': 'process-section',
+            'icon': '🔄'
+        },
+        'policy': {
+            'id': 'policy',
+            'title': '정책/규제',
+            'description': '관련 정책 및 규제 사항',
+            'trigger_words': ['정책', '규제', '법안', '제도', '지원', '인센티브', '보조금', '세제', '기준'],
+            'min_items': 3,
+            'max_items': 5,
+            'style': 'policy-section',
+            'icon': '📋'
+        }
+    }
+    
+    # 섹션별 색상 테마
+    SECTION_COLORS = {
+        'background-section': '#2C3E50',      # 진한 청회색
+        'technical-section': '#16A085',       # 청록색
+        'comparison-section': '#8E44AD',      # 보라색
+        'statistics-section': '#E74C3C',      # 빨간색
+        'benefits-section': '#27AE60',        # 초록색
+        'challenges-section': '#E67E22',      # 주황색
+        'timeline-section': '#3498DB',        # 파란색
+        'stakeholders-section': '#F39C12',    # 금색
+        'process-section': '#1ABC9C',         # 민트색
+        'policy-section': '#34495E'           # 어두운 회색
+    }
+    
+    
+    @property
+    def SECTIONS(self):
+        """모든 섹션 통합 (하위 호환성을 위한 프로퍼티)"""
+        return {**self.REQUIRED_SECTIONS, **self.OPTIONAL_SECTIONS}
+
+    @classmethod
+    def get_all_sections(cls) -> Dict:
+        """모든 섹션 정보 반환"""
+        return {
+            'required': cls.REQUIRED_SECTIONS,
+            'optional': cls.OPTIONAL_SECTIONS,
+            'colors': cls.SECTION_COLORS
+        }
+    
+    @classmethod
+    def get_section_by_id(cls, section_id: str) -> Optional[Dict]:
+        """ID로 섹션 정보 조회"""
+        return cls.OPTIONAL_SECTIONS.get(section_id)
+    
+    @classmethod
+    def get_trigger_words(cls, section_id: str) -> List[str]:
+        """섹션별 트리거 단어 반환"""
+        section = cls.get_section_by_id(section_id)
+        return section.get('trigger_words', []) if section else []
+    
+    @classmethod
+    def get_section_style(cls, section_id: str) -> Dict[str, str]:
+        """섹션별 스타일 정보 반환"""
+        section = cls.get_section_by_id(section_id)
+        if not section:
+            return {}
+        
+        style_class = section.get('style', '')
+        color = cls.SECTION_COLORS.get(style_class, '#2C3E50')
+        
+        return {
+            'class': style_class,
+            'color': color,
+            'icon': section.get('icon', '📄')
+        }

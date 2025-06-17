@@ -8,31 +8,43 @@
 - 📊 섹션 분석 및 자동 최적화
 """
 
+from typing import Dict, List, Optional, Union, Tuple, Any
 import streamlit as st
-import json
 import os
-from dotenv import load_dotenv
+from datetime import datetime, timedelta
+import json
+from anthropic import Anthropic
+import time
 from pathlib import Path
+from card_news.test_mode_generator import TestModeGenerator
+# from watch_interested_articles import load_interested_articles, save_generated_card_news
+from card_news.section_selector import SectionSelector
+from card_news.section_config import SectionConfig
+from card_news.analytics_integration import AnalyticsDashboard
 
-# 환경변수 로드
-load_dotenv()
-from datetime import datetime, date
-import anthropic
-from typing import List, Dict, Optional
-from update_summary import add_to_summary, update_summary_date
-import re
-from card_news.section_selector import SectionSelector  # 섹션 선택기 추가
-from card_news.section_config import SectionConfig    # 섹션 설정 추가
-from card_news.analytics_integration import AnalyticsDashboard  # 분석 대시보드 추가
+# 타입 시스템 import 추가
+from card_news.types import (
+    Article, Section, ThemeData, GenerationRequest,
+    SectionList, MixedSectionData
+)
+from card_news.validators import (
+    DataValidator, TypeGuard, ensure_string, 
+    normalize_sections, sanitize_key
+)
+from card_news.decorators import (
+    validate_inputs, fully_validated, safe_dict_access,
+    ensure_string_params, normalize_section_output
+)
 
-# 페이지 설정
+from dotenv import load_dotenv
+
 st.set_page_config(
     page_title="⚡ 전력산업 카드뉴스 생성기",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
+    
 # 비용 상수 (2025년 6월 기준)
 COST_PER_REQUEST = 0.555  # USD
 COST_PER_REQUEST_KRW = 750  # KRW
@@ -169,8 +181,9 @@ class CardNewsGenerator:
         self.output_dir = Path("/mnt/c/Users/KJ/Desktop/EnhancedCardNews/detailed")
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
+    @ensure_string_params('keyword')
     def get_color_theme(self, keyword: str) -> Dict[str, str]:
-        """키워드에 따른 색상 테마 반환"""
+        """키워드에 따른 색상 테마 반환 (타입 안전)"""
         themes = {
             '재생에너지': {
                 'primary': '#10b981',  # 초록
@@ -216,9 +229,27 @@ class CardNewsGenerator:
             'gradient': 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
         }
     
-    def generate_card_news(self, article: Dict, color_theme: Dict, emphasis: List[str], 
+    @fully_validated
+    def generate_card_news(self, article: Union[Dict, Article], 
+                          color_theme: Union[Dict, str], 
+                          emphasis: Union[List[str], List[Section], MixedSectionData], 
                           optimized_sections: Optional[List[str]] = None) -> str:
-        """Claude API를 통한 카드뉴스 생성"""
+        """Claude API를 통한 카드뉴스 생성 (타입 안전)"""
+        
+        # Article 객체로 변환
+        if isinstance(article, dict):
+            article = DataValidator.validate_article(article)
+        
+        # 섹션 정규화
+        emphasis_sections = DataValidator.normalize_sections(emphasis)
+        emphasis_ids = [s.id for s in emphasis_sections]
+        
+        # optimized_sections 정규화
+        if optimized_sections:
+            opt_sections = DataValidator.normalize_sections(optimized_sections)
+            sections = [s.id for s in opt_sections]
+        else:
+            sections = emphasis_ids
         
         # 섹션 스타일 CSS 파일 읽기
         try:
@@ -235,10 +266,10 @@ class CardNewsGenerator:
 전력산업 뉴스를 시각적으로 매력적인 HTML 카드뉴스로 변환해주세요.
 
 기사 정보:
-- 제목: {article['title']}
-- 요약: {article['summary']}
+- 제목: {article.title}
+- 요약: {article.summary}
 - 핵심 내용: {article.get('content', '내용 없음')}
-- 키워드: {', '.join(article['keywords'])}
+- 키워드: {', '.join(article.get('keywords', []))}
 - 출처: {article.get('source', '전기신문')}
 - URL: {article['url']}
 
@@ -299,8 +330,9 @@ def load_interested_articles() -> List[Dict]:
         st.error(f"기사 로드 중 오류: {str(e)}")
         return []
 
+@ensure_string_params('article_id', 'file_path')
 def save_generated_card_news(article_id: str, file_path: str):
-    """생성된 카드뉴스 정보 저장"""
+    """생성된 카드뉴스 정보 저장 (타입 안전)"""
     history_file = 'generated_cardnews_history.json'
     
     # 기존 히스토리 로드
@@ -322,8 +354,22 @@ def save_generated_card_news(article_id: str, file_path: str):
         json.dump(history, f, ensure_ascii=False, indent=2)
 
 def main():
+    # .env 파일 로드
+    load_dotenv()
+    
     st.title("⚡ 전력산업 카드뉴스 생성기")
     st.markdown("---")
+    
+    # 사이드바 설정
+    with st.sidebar:
+        st.markdown("### ⚙️ 설정")
+        test_mode = st.checkbox(
+            "🧪 테스트 모드",
+            help="테스트 모드를 활성화하면 실제 API를 호출하지 않고 더미 카드뉴스를 생성합니다. 비용이 발생하지 않습니다."
+        )
+        if test_mode:
+            st.info("🧪 테스트 모드 활성화됨\n실제 API 호출 없이 테스트합니다.")
+        st.markdown("---")
     
     # 분석 대시보드 인스턴스
     analytics_dashboard = AnalyticsDashboard()
@@ -333,14 +379,45 @@ def main():
     
     # 탭 1: 카드뉴스 생성
     with tabs[0]:
-        # API 키 확인
-        api_key = os.getenv('ANTHROPIC_API_KEY')
+        # API 키 처리 - 사이드바에서 입력받기
+        with st.sidebar:
+            st.markdown("### 🔑 API 설정")
+            
+            # 환경변수에서 기본값 로드
+            env_api_key = os.getenv('ANTHROPIC_API_KEY', '')
+            
+            # API 키 입력 필드
+            api_key = st.text_input(
+                "Claude API Key",
+                value=env_api_key,
+                type="password",
+                help="Claude API 키를 입력하세요. 환경변수가 설정되어 있으면 자동으로 로드됩니다.",
+                key="anthropic_api_key"
+            )
+            
+            if api_key:
+                st.success("✅ API 키가 설정되었습니다")
+            else:
+                st.warning("⚠️ API 키를 입력해주세요")
+            
+            st.markdown("---")
+        
+        # API 키가 없으면 안내 메시지 표시
         if not api_key:
-            st.error("⚠️ ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다!")
+            st.error("⚠️ API 키가 설정되지 않았습니다!")
+            st.info("""
+            **API 키 설정 방법:**
+            1. 왼쪽 사이드바에서 'API 설정' 섹션 확인
+            2. Claude API 키 입력
+            3. 또는 `.env` 파일에 `ANTHROPIC_API_KEY` 설정
+            
+            API 키는 [Anthropic Console](https://console.anthropic.com/)에서 발급받을 수 있습니다.
+            """)
             st.stop()
         
         # 생성기 초기화
         generator = CardNewsGenerator(api_key)
+        test_generator = TestModeGenerator()
         section_selector = SectionSelector()
         
         # 비용 확인
@@ -377,7 +454,7 @@ def main():
             
             # 기사별 카드뉴스 생성
             for idx, article in enumerate(articles):
-                with st.expander(f"📄 {article['title'][:50]}...", expanded=True):
+                with st.expander(f"📄 {article.title[:50]}...", expanded=True):
                     # 기사 정보
                     col1, col2 = st.columns([3, 1])
                     
@@ -388,13 +465,13 @@ def main():
                         # 키워드
                         keywords_html = " ".join([
                             f'<span class="keyword-tag">{kw}</span>' 
-                            for kw in article['keywords']
+                            for kw in article.get('keywords', [])
                         ])
                         st.markdown(f"**🏷️ 키워드:** {keywords_html}", unsafe_allow_html=True)
                         
                         # 요약
                         st.markdown("**📝 요약:**")
-                        st.write(article['summary'])
+                        st.write(article.summary)
                         
                         # 핵심 내용
                         st.markdown("**🎯 핵심 내용:**")
@@ -408,7 +485,7 @@ def main():
                     st.markdown("---")
                     
                     # 섹션 분석 인사이트 (미니 대시보드)
-                    reliability_scores = analytics_dashboard.render_mini_dashboard(article['keywords'])
+                    reliability_scores = analytics_dashboard.render_mini_dashboard(article.get('keywords', []))
                     
                     # 카드뉴스 생성 옵션
                     st.markdown("### 🎨 카드뉴스 생성 옵션")
@@ -425,8 +502,8 @@ def main():
                         
                         if color_option == "자동 (키워드 기반)":
                             # 첫 번째 키워드 기반 자동 테마
-                            auto_theme = generator.get_color_theme(article['keywords'][0] if article['keywords'] else '')
-                            keyword = article["keywords"][0] if article["keywords"] else "전력산업"
+                            auto_theme = generator.get_color_theme(article.get('keywords', [])[0] if article.get('keywords', []) else '')
+                            keyword = article.get("keywords", [])[0] if article.get("keywords", []) else "전력산업"
                             st.info(f"🎨 '{keyword}' 테마가 적용됩니다")
                         else:
                             # 수동 선택
@@ -444,7 +521,7 @@ def main():
                                 format_func=lambda x: theme_names[x],
                                 key=f"theme_{idx}"
                             )
-                            auto_theme = generator.get_color_theme(selected_theme)
+                            auto_theme = generator.get_color_theme(ensure_string(selected_theme))
                     
                     with col2:
                         # 섹션 선택 옵션
@@ -463,7 +540,7 @@ def main():
                             
                             # 최적화된 섹션 가져오기
                             optimized_sections, reasons = analytics_dashboard.get_optimized_sections(
-                                article['keywords'],
+                                article.get('keywords', []),
                                 recommended_sections
                             )
                             
@@ -492,7 +569,7 @@ def main():
                     # 생성 전 확인
                     if emphasis:
                         selected_sections_str = ", ".join([
-                            section_selector.config.SECTIONS[s].get('title', s) 
+                            SectionConfig.ALL_SECTIONS[s].get('title', s) 
                             for s in emphasis
                         ])
                         st.info(f"**선택된 섹션**: {selected_sections_str}")
@@ -518,19 +595,34 @@ def main():
                                 type="primary",
                                 disabled=not confirm or not can_generate
                             ):
-                                with st.spinner("🎨 카드뉴스 생성 중... (30초~1분 소요)"):
+                                with st.spinner("🎨 카드뉴스 생성 중..." + (" (테스트 모드)" if test_mode else " (30초~1분 소요)")):
                                     # 카드뉴스 생성
-                                    html_content = generator.generate_card_news(
-                                        article, auto_theme, emphasis,
-                                        optimized_sections=emphasis if optimization_option == "자동 추천 (AI 분석)" else None
-                                    )
+                                    if test_mode:
+                                        # 테스트 모드: 더미 HTML 생성
+                                        html_content = test_generator.generate_test_card_news(
+                                            article, auto_theme, emphasis
+                                        )
+                                        # 비용 없음
+                                        st.warning("🧪 테스트 모드로 생성되었습니다. 실제 API는 호출되지 않았습니다.")
+                                    else:
+                                        # 실제 모드: API 호출
+                                        html_content = generator.generate_card_news(
+                                            article, auto_theme, emphasis,
+                                            optimized_sections=emphasis if optimization_option == "자동 추천 (AI 분석)" else None
+                                        )
                                     
                                     if html_content:
-                                        st.success(f"✅ 카드뉴스 생성 완료! (비용: ${COST_PER_REQUEST})")
+                                        if test_mode:
+                                            st.success("✅ 테스트 카드뉴스 생성 완료! (비용: $0.00)")
+                                    else:
+                                        if test_mode:
+                                            st.success("✅ 테스트 카드뉴스 생성 완료! (비용: $0.00)")
+                                        else:
+                                            st.success(f"✅ 카드뉴스 생성 완료! (비용: ${COST_PER_REQUEST})")
                                         st.balloons()
                                         
                                         # 분석 데이터 저장
-                                        section_selector.save_selection_analytics(article['id'], emphasis)
+                                        section_selector.save_selection_analytics(ensure_string(article.get('page_id', article.get('id', ''))), emphasis)
                                         
                                         # 미리보기
                                         st.markdown("### 👁️ 미리보기")
@@ -538,7 +630,7 @@ def main():
                                         
                                         # 다운로드 버튼
                                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                                        filename = f"card_news_{article['id']}_{timestamp}.html"
+                                        filename = f"card_news_{article.get('page_id', article.get('id', ''))}_{timestamp}.html"
                                         
                                         st.download_button(
                                             label="📥 HTML 파일 다운로드",
@@ -555,7 +647,7 @@ def main():
                                         with open(file_path, 'w', encoding='utf-8') as f:
                                             f.write(html_content)
                                         
-                                        save_generated_card_news(article['id'], str(file_path))
+                                        save_generated_card_news(article.get('page_id', article.get('id', '')), str(file_path))
                                         
                                         # 요약 페이지에 추가
                                         try:
@@ -568,7 +660,7 @@ def main():
                                         # 품질 피드백 UI
                                         with st.expander("💬 카드뉴스 품질 평가", expanded=True):
                                             analytics_dashboard.render_quality_feedback(
-                                                article['id'], 
+                                                article.get('page_id', article.get('id', '')), 
                                                 emphasis
                                             )
                     else:

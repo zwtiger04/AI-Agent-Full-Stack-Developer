@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전력산업 카드뉴스 - 2025년 6월 9일</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 30px;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header .subtitle {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            position: relative;
+            z-index: 1;
+        }
+
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .news-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .news-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .news-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+
+        .news-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .card-category {
+            display: inline-block;
+            padding: 5px 15px;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 22px;
+            margin-bottom: 20px;
+            color: #fff;
+            font-weight: 700;
+            line-height: 1.4;
+        }
+
+        .card-summary {
+            font-size: 16px;
+            color: #ccc;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #888;
+            font-size: 14px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .read-more {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: gap 0.3s ease;
+        }
+
+        .read-more:hover {
+            gap: 10px;
+        }
+
+        /* 카테고리별 색상 */
+        .category-ess { background: rgba(102, 126, 234, 0.2); color: #667eea; }
+        .category-solar { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .category-policy { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+        .category-market { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+        .category-tech { background: rgba(156, 39, 176, 0.2); color: #9c27b0; }
+
+        .stats-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .stats-title {
+            font-size: 28px;
+            margin-bottom: 30px;
+            color: #667eea;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+        }
+
+        .stat-item {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: scale(1.05);
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: 900;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 16px;
+            color: #aaa;
+        }
+
+        /* 애니메이션 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .news-card {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .news-card:nth-child(1) { animation-delay: 0.1s; }
+        .news-card:nth-child(2) { animation-delay: 0.2s; }
+        .news-card:nth-child(3) { animation-delay: 0.3s; }
+        .news-card:nth-child(4) { animation-delay: 0.4s; }
+        .news-card:nth-child(5) { animation-delay: 0.5s; }
+        .news-card:nth-child(6) { animation-delay: 0.6s; }
+        .news-card:nth-child(7) { animation-delay: 0.7s; }
+        .news-card:nth-child(8) { animation-delay: 0.8s; }
+        .news-card:nth-child(9) { animation-delay: 0.9s; }
+        .news-card:nth-child(10) { animation-delay: 1.0s; }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 32px;
+            }
+            
+            .news-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 섹션 -->
+        <div class="header">
+            <h1>전력산업 주요 뉴스</h1>
+            <p class="subtitle">2025년 6월 9일 | 에너지 전환의 현장을 전합니다</p>
+        </div>
+
+        <!-- 통계 섹션 -->
+        <div class="stats-section">
+            <h2 class="stats-title">오늘의 주요 지표</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">10</div>
+                    <div class="stat-label">전체 기사</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">ESS 관련</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">태양광 관련</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">정책/규제</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 뉴스 그리드 -->
+        <div class="news-grid">
+            <!-- 기사 1: SK이터닉스 태양광 -->
+            <div class="news-card" onclick="window.location.href='detailed/detail_SK이터닉스-40MW-규모-태양광-직접전력거래계약-체결_2062360b.html'">
+                <span class="card-category category-solar">태양광</span>
+                <h3 class="card-title">SK이터닉스, 40MW 규모 태양광 직접전력거래계약 체결</h3>
+                <p class="card-summary">
+                    SK이터닉스가 40MW 규모의 대형 태양광 발전 프로젝트를 통해 직접전력거래(PPA) 계약을 체결했습니다. 
+                    이는 기업의 재생에너지 전환을 가속화하고 탄소중립 목표 달성에 크게 기여할 것으로 기대됩니다.
+                </p>
+                <div class="card-meta">
+                    <span>전기신문</span>
+                    <a href="#" class="read-more">자세히 보기 →</a>
+                </div>
+            </div>
+
+            <!-- 기사 2: 엔라이튼 태양광 -->
+            <div class="news-card" onclick="window.location.href='detailed/detail_엔라이튼-AJ네트웍스-천안센터-669kW-자가용-태양광-구축RE100-전환점_20b2360b.html'">
+                <span class="card-category category-solar">태양광</span>
+                <h3 class="card-title">엔라이튼, AJ네트웍스 천안센터 669kW 자가용 태양광 구축</h3>
+                <p class="card-summary">
+                    엔라이튼이 AJ네트웍스 천안센터에 669kW 규모의 자가용 태양광 발전 시설을 성공적으로 구축했습니다. 
+                    이는 기업의 RE100 전환에 중요한 이정표가 될 전망입니다.
+                </p>
+                <div class="card-meta">
+                    <span>전기신문</span>
+                    <a href="#" class="read-more">자세히 보기 →</a>
+                </div>
+            </div>
+
+            <!-- 기사 3: 전력거래소 ESS -->
+            <div class="news-card" onclick="window.location.href='detailed/detail_전력거래소-나주서-ESS-입찰-설명회중앙계약시장-제도-전환-본격화_20b2360b.html'">
+                <span class="card-category category-ess">ESS</span>
+                <h3 class="card-title">전력거래소, 나주서 ESS 입찰 설명회 개최</h3>
+                <p class="card-summary">
+                    전력거래소가 나주에서 ESS 입찰 설명회를 개최하며 중앙계약시장 제도로의 전환을 본격화했습니다. 
+                    이는 전력계통 안정성 강화와 재생에너지 확대를 위한 핵심 정책입니다.
+                </p>
+                <div class="card-meta">
+                    <span>전기신문</span>
+                    <a href="#" class="read-more">자세히 보기 →</a>
+                </div>
+            </div>
+
+            <!-- 기사 4: 전남도 ESS 지원단 -->
+            <div class="news-card" onclick="window.location.href='detailed/detail_전남도-시군-계통안정-ESS-지원단-운영지역-사업자-진출-돕기로_20b2360b.html'">
+                <span class="card-category category-ess">ESS</span>
+                <h3 class="card-title">전남도-시군, '계통안정 ESS 지원단' 운영</h3>
+                <p class="card-summary">
+                    전남도와 시군이 '계통안정 ESS 지원단'을 운영하여 지역 사업자들의 ESS 시장 진출을 적극 지원합니다. 
+                    이는 지역 에너지 산업 활성화와 계통 안정성 확보에 기여할 것으로 보입니다.
+                </p>
+                <div class="card-meta">
+                    <span>전기신문</span>
+                    <a href="#" class="read-more">자세히 보기 →</a>
+                </div>
+            </div>
+
+            <!-- 기사 5: LG에너지솔루션 -->
+            <div class="news-card" onclick="window.location.href='detailed/detail_LG에너지솔루션-美에서-ESS용-LFP-배터리-대규모-양산-시작_2062360b.html'">
+                <span class="card-category category-tech">기술</span>
+                <h3 class="card-title">LG에너지솔루션, 미국에서 ESS용 LFP 배터리 대규모 양산 시작</h3>
+                <p class="card-summary">
+                    LG에너지솔루션이 미국에서 ESS용 LFP(리튬인산철) 배터리의 대규모 양산을 시작했습니다. 
+                    이는 글로벌 ESS 시장에서의 경쟁력 강화와 미국 시장 공략에 중요한 전환점이 될 것입니다.
+                </p>
+                <div class="card-meta">
+                    <span>전기신문</span>
+                    <a href="#" class="read-more">자세히 보기 →</a>
+                </div>
+            </div>
+
+            <!-- 기사 6: 재생에너지 성장 장애요인 -->
+            <div class="news-card" onclick="window.location.href='detailed/detail_美-에너지경제재무분석-연구소-韓-재생에너지-성장을-가로막는-세가지-요인-보고서-발간_20b2360b.html'">
+                <span class="card-category category-policy">정책</span>
+                <h3 class="card-title">미국 연구소, 한국 재생에너지 성장 장애요인 분석</h3>
+                <p class="card-summary">
+                    미국 에너지경제·재무분석 연구소가 한국의 재생에너지 성장을 가로막는 세 가지 주요 요인을 분석한 보고서를 발간했습니다. 
+                    정책적 개선 방향에 대한 중요한 시사점을 제공합니다.
+                </p>
+                <div class="card-meta">
+                    <span>전기신문</span>
+                    <a href="#" class="read-more">자세히 보기 →</a>
+                </div>
+            </div>
+
+            <!-- 기사 7: 이재명 탄소중립 -->
+            <div class="news-card" onclick="window.location.href='detailed/detail_이재명-시대-개막-속도내는-탄소중립-드라이브계통문제-해결은-숙제_2082360b.html'">
+                <span class="card-category category-policy">정책</span>
+                <h3 class="card-title">이재명 시대 개막, 속도내는 탄소중립 드라이브</h3>
+                <p class="card-summary">
+                    이재명 당선인의 탄소중립 정책이 본격화되면서 재생에너지 확대가 가속화될 전망입니다. 
+                    다만 계통 문제 해결이 성공적인 에너지 전환의 핵심 과제로 부상했습니다.
+                </p>
+                <div class="card-meta">
+                    <span>전기신문</span>
+                    <a href="#" class="read-more">자세히 보기 →</a>
+                </div>
+            </div>
+
+            <!-- 기사 8: 그린피스 -->
+            <div class="news-card" onclick="window.location.href='detailed/detail_그린피스-이재명-정부에-기후위기-속-지속가능한-구조-전환-촉구_2082360b.html'">
+                <span class="card-category category-policy">정책</span>
+                <h3 class="card-title">그린피스, 이재명 정부에 지속가능한 구조 전환 촉구</h3>
+                <p class="card-summary">
+                    그린피스가 이재명 정부에 기후위기 대응을 위한 지속가능한 산업 구조 전환을 촉구했습니다. 
+                    에너지 전환과 녹색 일자리 창출의 중요성을 강조했습니다.
+                </p>
+                <div class="card-meta">
+                    <span>전기신문</span>
+                    <a href="#" class="read-more">자세히 보기 →</a>
+                </div>
+            </div>
+
+            <!-- 기사 9: 분산에너지 특구 -->
+            <div class="news-card" onclick="window.location.href='detailed/detail_신기술-경연장인가계통-기여-없는-분산에너지-특구_2062360b.html'">
+                <span class="card-category category-tech">기술</span>
+                <h3 class="card-title">신기술 경연장인가, 계통 기여 없는 분산에너지 특구</h3>
+                <p class="card-summary">
+                    분산에너지 특구가 신기술 실증의 장으로 활용되고 있으나, 실질적인 계통 기여도에 대한 우려가 제기되고 있습니다. 
+                    정책 방향의 재검토가 필요한 시점입니다.
+                </p>
+                <div class="card-meta">
+                    <span>전기신문</span>
+                    <a href="#" class="read-more">자세히 보기 →</a>
+                </div>
+            </div>
+
+            <!-- 기사 10: 독일 에너지전환 -->
+            <div class="news-card" onclick="window.location.href='detailed/detail_독일-에너지전환을-넘다5끝-에너지정책-韓과-여기서-갈렸다_2072360b.html'">
+                <span class="card-category category-market">시장</span>
+                <h3 class="card-title">독일 에너지전환을 넘다: 한국과의 정책 차이점 분석</h3>
+                <p class="card-summary">
+                    독일의 성공적인 에너지전환 사례를 분석하고, 한국과의 정책적 차이점을 짚어봅니다. 
+                    한국 에너지 정책의 방향성에 중요한 시사점을 제공합니다.
+                </p>
+                <div class="card-meta">
+                    <span>전기신문</span>
+                    <a href="#" class="read-more">자세히 보기 →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
