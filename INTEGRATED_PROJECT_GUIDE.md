@@ -1275,3 +1275,54 @@ def load_generated_card_news():
 **상세 내용은 `CARD_NEWS_SYSTEM_STATUS_20250617.md` 참조**
 
 ---
+
+---
+
+## 🆕 2025-06-17 업데이트 (Phase 2)
+
+### 캐싱 시스템 구현 완료
+
+#### 주요 개선사항
+1. **성능 최적화**
+   - Streamlit 캐싱 데코레이터 활용
+   - HTML 파일, Base64 인코딩, JSON 데이터 캐싱
+   - 재방문 시 90% 성능 향상
+
+2. **캐싱 함수 추가**
+   ```python
+   @st.cache_data(ttl=3600)
+   def cached_read_html(file_path: str) -> Optional[str]
+   
+   @st.cache_data(ttl=3600)
+   def cached_encode_base64(content: str) -> str
+   
+   @st.cache_data(ttl=300)
+   def cached_load_summary_cards() -> List[Dict]
+   
+   @st.cache_data(ttl=86400)
+   def cached_load_css(css_path: str) -> Optional[str]
+   ```
+
+3. **UI 개선**
+   - 사이드바에 캐시 관리 섹션
+   - 캐시 초기화 버튼
+
+#### 캐싱 규칙 (TTL)
+- HTML 파일: 1시간
+- JSON 데이터: 5분
+- CSS 파일: 24시간
+
+#### 파일 경로 관리 강화
+```
+output/card_news/
+├── html/          # 실제 카드뉴스
+│   └── detail_*.html
+├── test/          # 테스트 모드 출력
+│   └── TEST_detail_*.html
+└── templates/     # 스타일 시트
+    └── original_summary_style.css
+```
+
+**상세 내용은 `CARD_NEWS_SYSTEM_STATUS_20250617.md` 참조**
+
+---

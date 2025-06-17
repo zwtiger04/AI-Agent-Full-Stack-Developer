@@ -685,54 +685,6 @@ def load_interested_articles() -> List[Dict]:
     return []
 
 
-
-# ========== 캐싱 함수들 (Phase 2-1a) ==========
-@st.cache_data(ttl=3600, show_spinner="HTML 파일 로딩 중...")  # 1시간 캐싱
-def cached_read_html(file_path: str) -> Optional[str]:
-    """HTML 파일을 읽고 캐싱 - 파일 경로를 키로 사용"""
-    # 캐시 미스 시에만 이 메시지가 표시됨
-    print(f"[캐시 미스] HTML 파일 읽기: {Path(file_path).name}")
-    try:
-        path = Path(file_path)
-        if path.exists():
-            with open(path, 'r', encoding='utf-8') as f:
-                return f.read()
-    except Exception as e:
-        # 에러는 로깅만, UI에는 표시하지 않음 (캐시 함수 내부)
-        print(f"파일 읽기 오류: {e}")
-    return None
-
-@st.cache_data(ttl=3600)  # 1시간 캐싱
-def cached_encode_base64(content: str) -> str:
-    """HTML 내용을 Base64로 인코딩하고 캐싱"""
-    if not content:
-        return ""
-    return base64.b64encode(content.encode()).decode()
-
-@st.cache_data(ttl=300, show_spinner="JSON 데이터 로딩 중...")  # 5분 캐싱
-def cached_load_summary_cards() -> List[Dict]:
-    """summary_cards.json을 로드하고 캐싱"""
-    print("[캐시 미스] summary_cards.json 로드")
-    try:
-        with open(get_path_str('summary_json'), 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return data.get('cards', [])
-    except Exception as e:
-        print(f"summary_cards.json 로드 오류: {e}")
-        return []
-
-@st.cache_data(ttl=86400)  # 24시간 캐싱
-def cached_load_css(css_path: str) -> Optional[str]:
-    """CSS 파일을 로드하고 캐싱"""
-    try:
-        path = Path(css_path)
-        if path.exists():
-            with open(path, 'r', encoding='utf-8') as f:
-                return f.read()
-    except Exception as e:
-        print(f"CSS 로드 오류: {e}")
-    return None
-
 def render_summary_tab():
 
     import base64
@@ -819,15 +771,12 @@ def render_summary_tab():
                 file_path = "#"
             else:
             
-                # HTML 파일 읽기 - 캐싱 사용
-                html_content_card = cached_read_html(str(actual_path))
-                if html_content_card:
-                    # Base64 인코딩 - 캐싱 사용
-                    encoded = cached_encode_base64(html_content_card)
-                    # Data URL 생성
-                    file_path = f"data:text/html;base64,{encoded}"
-                else:
-                    file_path = "#"
+                # HTML 파일 읽어서 Base64로 인코딩
+                with open(actual_path, 'r', encoding='utf-8') as f:
+                    html_content_card = f.read()
+                encoded = base64.b64encode(html_content_card.encode()).decode()
+                # Data URL 생성
+                file_path = f"data:text/html;base64,{encoded}"
         except Exception as e:
             st.error(f"파일 로드 오류 ({filename}): {e}")
             file_path = "#" 
@@ -868,11 +817,13 @@ def load_generated_card_news():
     
     card_news_list = []
     
-    # summary_cards.json 로드 - 캐싱 사용
+    # summary_cards.json 로드
     try:
-        cards = cached_load_summary_cards()
-        
-        for card in cards:
+        with open(get_path_str('summary_json'), 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            cards = data.get('cards', [])
+            
+            for card in cards:
                 # 카테고리 매핑
                 category_map = {
                     '태양광': ('solar', '태양광'),
@@ -988,19 +939,6 @@ def main():
                     st.error("❌ API 연결 실패")
             else:
                 st.warning("⚠️ API 키를 입력해주세요")
-        
-        st.divider()
-        
-        # 🗃️ 캐시 관리
-        st.header("🗃️ 캐시 관리")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🔄 캐시 초기화", use_container_width=True):
-                st.cache_data.clear()
-                st.success("✅ 캐시가 초기화되었습니다!")
-                st.rerun()
-        with col2:
-            st.caption("성능 향상을 위한 캐싱 중")
         
         st.divider()
         
